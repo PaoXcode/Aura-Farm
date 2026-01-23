@@ -1836,7 +1836,7 @@ function renderHome(){
     const t=estimateSessionMinutes(L);
     const b=document.createElement('button');
         b.className='card'; b.type='button'; b.onclick=()=>openLeaveSess(L);
-    b.innerHTML=`<div class="k"><span class="session-title-word">Séance</span><span class="session-letter">${L}</span></div><div class="s">${S.sub} ~${t} min</div>`;
+    b.innerHTML=`<div class="k"><span class="session-title-word">Séance</span> <span class="session-letter">${L}</span></div><div class="s">${S.sub} ~${t} min</div>`;
     if(getActiveSess()===L){
       b.classList.add('active-session');
       b.insertAdjacentHTML('beforeend', `<div class="asBadge">🟡 Séance en cours</div>`);

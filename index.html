@@ -1802,10 +1802,10 @@ function openSession(L){
   setActiveSess(L);
   current={L};
   const S=PROGRAM[L];
-  document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span> <span class="session-letter">${L}</span>`;
+  document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span><span class="session-letter">${L}</span>`;
   document.getElementById('btnDone').onclick=()=>openDone();
   document.getElementById('focusBtn').onclick=()=>{ focusSeance=true; focusPickSid=null; toggleFocus(true); };
-  document.getElementById('sessMeta').textContent = `${S.sub} • ~50 min`;
+  document.getElementById('sessMeta').textContent = `${S.sub} ~50 min`;
   renderSession(L);
   // ✅ restauration brouillon si existant
   const d=loadDraft();
@@ -1836,7 +1836,7 @@ function renderHome(){
     const t=estimateSessionMinutes(L);
     const b=document.createElement('button');
         b.className='card'; b.type='button'; b.onclick=()=>openLeaveSess(L);
-    b.innerHTML=`<div class="k"><span class="session-title-word">Séance</span> <span class="session-letter">${L}</span></div><div class="s">${S.sub} • ~${t} min</div>`;
+    b.innerHTML=`<div class="k"><span class="session-title-word">Séance</span><span class="session-letter">${L}</span></div><div class="s">${S.sub} ~${t} min</div>`;
     if(getActiveSess()===L){
       b.classList.add('active-session');
       b.insertAdjacentHTML('beforeend', `<div class="asBadge">🟡 Séance en cours</div>`);

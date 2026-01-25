@@ -878,9 +878,11 @@ label{
       <h1 style="font-size:18px;font-weight:950;margin:0">Stats</h1>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Retour</button>
+        <button class="btn ghost" type="button" onclick="triggerImport()">Importer CSV</button>
         <button class="btn ghost" type="button" onclick="exportData()">Exporter</button>
       </div>
     </div>
+    <input id="importCsv" type="file" accept=".csv,text/csv" style="display:none"/>
 
     <div class="panel" style="margin-top:12px">
       <div style="font-weight:950">Séries semaine</div>
@@ -898,6 +900,7 @@ label{
       <div class="small" style="margin-top:6px">Tu peux modifier reps/charge si tu t’es trompé.</div>
       <div id="hist"></div>
       <div class="small" style="margin-top:10px;color:rgba(255,213,106,.9)">⚠️ Conseil : exporte 1×/semaine pour te faire une sauvegarde CSV.</div>
+      <div class="small" style="margin-top:6px;color:rgba(255,255,255,.72)">Astuce : importe un export CSV Aura Farm pour restaurer l’historique après une mise à jour.</div>
     </div>
   </section>
 </div>
@@ -2673,6 +2676,190 @@ function deleteEntry(entryId){
 }
 
 // ============================
+// ✅ Import CSV (Aura Farm)
+// ============================
+function triggerImport(){
+  const input = document.getElementById('importCsv');
+  if(!input) return;
+  input.value = '';
+  input.click();
+}
+
+function parseCsv(text){
+  const rows=[];
+  let row=[];
+  let field='';
+  let inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    const next=text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field+='"'; i++; }
+      else if(c === '"'){ inQuotes=false; }
+      else{ field+=c; }
+      continue;
+    }
+    if(c === '"'){ inQuotes=true; continue; }
+    if(c === ';'){
+      row.push(field);
+      field='';
+      continue;
+    }
+    if(c === '\n'){
+      row.push(field);
+      rows.push(row);
+      row=[]; field='';
+      continue;
+    }
+    if(c === '\r'){ continue; }
+    field+=c;
+  }
+  row.push(field);
+  if(row.length>1 || row[0]) rows.push(row);
+  return rows;
+}
+
+function normalizeHeader(h){
+  return String(h||'').replace(/^\uFEFF/,'').trim().toLowerCase();
+}
+
+function effFromLabel(label){
+  const v=String(label||'').trim().toLowerCase();
+  if(v==='facile') return 'EASY';
+  if(v==='dur') return 'HARD';
+  if(v==='ok') return 'OK';
+  return null;
+}
+
+function parseFrDate(dateStr, timeStr){
+  const d=String(dateStr||'').trim();
+  const t=String(timeStr||'').trim();
+  const [dd,mm,yyyy]=d.split('/').map(n=>parseInt(n,10));
+  if(!Number.isFinite(dd)||!Number.isFinite(mm)||!Number.isFinite(yyyy)) return null;
+  let hh=0, min=0;
+  if(t){
+    const parts=t.split(':');
+    hh=parseInt(parts[0],10);
+    min=parseInt(parts[1],10);
+  }
+  if(!Number.isFinite(hh)) hh=0;
+  if(!Number.isFinite(min)) min=0;
+  return new Date(yyyy, mm-1, dd, hh, min, 0, 0);
+}
+
+function importData(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const text=String(reader.result||'');
+    const rows=parseCsv(text).filter(r=>r.some(cell=>String(cell||'').trim()!==''));
+    if(!rows.length){
+      toast('Fichier CSV vide.');
+      return;
+    }
+    const header=rows.shift();
+    const map={};
+    header.forEach((h,idx)=>{ map[normalizeHeader(h)] = idx; });
+    const idxDate = map['date'];
+    const idxTime = map['heure'];
+    const idxLetter = map['séance'] ?? map['seance'];
+    const idxName = map['exercice'];
+    const idxMuscle = map['groupe_musculaire'];
+    const idxSets = map['séries'] ?? map['series'];
+    const idxRepsTarget = map['reps_cible'];
+    const idxReps = map['reps_totales'];
+    const idxLoad = map['charge'];
+    const idxUnit = map['unité'] ?? map['unite'];
+    const idxEff = map['effort'];
+    const idxRest = map['repos'];
+
+    if([idxDate, idxTime, idxLetter, idxName, idxReps].some(v=>v==null)){
+      toast('CSV non reconnu. Exporte depuis Aura Farm.');
+      return;
+    }
+
+    const existing=getLog();
+    const existingKeys=new Set(existing.map(entry=>{
+      const d=new Date(entry.ts);
+      const pad=n=>String(n).padStart(2,'0');
+      const keyDate=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const keyTime=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return `${entry.letter}_${keyDate}_${keyTime}`;
+    }));
+
+    const sessions=new Map();
+    let importedRows=0;
+    for(const row of rows){
+      const dateStr=row[idxDate];
+      const timeStr=row[idxTime];
+      const letter=row[idxLetter] || '?';
+      const name=row[idxName] || '';
+      const repsVal=toNum(row[idxReps]);
+      if(!name || !Number.isFinite(repsVal)) continue;
+      const d=parseFrDate(dateStr, timeStr);
+      if(!d) continue;
+      const pad=n=>String(n).padStart(2,'0');
+      const keyDate=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const keyTime=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const key=`${letter}_${keyDate}_${keyTime}`;
+      if(existingKeys.has(key)) continue;
+
+      if(!sessions.has(key)){
+        sessions.set(key,{letter, ts:d.getTime(), items:[]});
+      }
+
+      const repsTarget=String(row[idxRepsTarget]||'').trim();
+      let lo=null, hi=null;
+      if(repsTarget.includes('-')){
+        const parts=repsTarget.split('-').map(p=>toNum(p.trim()));
+        lo=Number.isFinite(parts[0])?parts[0]:null;
+        hi=Number.isFinite(parts[1])?parts[1]:null;
+      }
+
+      const unit = (row[idxUnit] || 'kg').trim() || 'kg';
+      const load = unit==='reps' ? null : toNum(row[idxLoad]);
+      const eff = effFromLabel(row[idxEff]);
+      const note = String(row[idxEff]||'').trim().toLowerCase()==='rappel';
+
+      sessions.get(key).items.push({
+        sid:newId(),
+        slot:null,
+        vid:null,
+        name:name,
+        muscle:row[idxMuscle] || '',
+        sets:toNum(row[idxSets]) || null,
+        lo:lo,
+        hi:hi,
+        rest:toNum(row[idxRest]) || null,
+        unit:unit,
+        load:Number.isFinite(load)?load:null,
+        repsTot:repsVal,
+        eff:eff,
+        note:note
+      });
+      importedRows++;
+    }
+
+    if(!sessions.size){
+      toast('Aucune nouvelle séance importée.');
+      return;
+    }
+
+    const merged=[...existing];
+    for(const entry of sessions.values()){
+      const vol=computeVolume(entry.items);
+      const total=Object.values(vol).reduce((a,b)=>a+b,0);
+      merged.push({id:newId(), ts:entry.ts, letter:entry.letter, items:entry.items, vol, total});
+    }
+    setLog(merged);
+    renderStats();
+    toast(`${sessions.size} séance(s) importée(s) (${importedRows} lignes).`);
+  };
+  reader.onerror=()=>toast('Lecture du CSV impossible.');
+  reader.readAsText(file);
+}
+
+// ============================
 // ✅ Export CSV (unique bouton Exporter)
 // ============================
 function csvEscape(v){
@@ -2818,6 +3005,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('statsBtn').addEventListener('click',openStats);
   document.getElementById('goalsBtn').addEventListener('click',openGoals);
   document.getElementById('sessionsBtn').addEventListener('click',goHome);
+  const importInput=document.getElementById('importCsv');
+  if(importInput){
+    importInput.addEventListener('change',(e)=>{
+      const file=e.target.files && e.target.files[0];
+      if(file) importData(file);
+    });
+  }
 
   show('home');
   renderHome();

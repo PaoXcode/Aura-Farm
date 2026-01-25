@@ -1406,7 +1406,96 @@ let rtState = {
   remainSec:0,
   endTs:0,
   tick:null,
+  alarmTimeout:null,
+  visible:false,
+  finished:false,
+  needsNotify:false,
 };
+
+const RT_STATE_KEY = 'paogramme_rt_state_v1';
+function rtPersist(){
+  try{
+    const payload = {
+      running: rtState.running,
+      title: rtState.title,
+      sub: rtState.sub,
+      totalSec: rtState.totalSec,
+      remainSec: rtState.remainSec,
+      endTs: rtState.endTs,
+      visible: rtState.visible,
+      finished: rtState.finished,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(RT_STATE_KEY, JSON.stringify(payload));
+  }catch{}
+}
+function rtClearAlarm(){
+  if(rtState.alarmTimeout){
+    clearTimeout(rtState.alarmTimeout);
+    rtState.alarmTimeout = null;
+  }
+}
+function rtScheduleAlarm(){
+  rtClearAlarm();
+  if(!rtState.running || !rtState.endTs) return;
+  const delay = Math.max(0, rtState.endTs - Date.now());
+  rtState.alarmTimeout = setTimeout(()=>{
+    if(!rtState.running) return;
+    rtFinish();
+  }, delay + 50);
+}
+function rtFinish(opts={}){
+  const {silent=false, reason='' } = opts;
+  if(rtState.finished) return;
+  rtState.running = false;
+  rtState.finished = true;
+  rtState.remainSec = 0;
+  rtState.endTs = 0;
+  rtStopTick();
+  rtClearAlarm();
+  rtRender();
+  rtMarkDone();
+  if(!silent && rtGetSound()) rtBoxingBell();
+  toast(reason ? `Repos terminé ${reason}.` : 'Repos terminé.');
+  rtPersist();
+}
+function rtSyncNow(opts={}){
+  if(!rtState.running || !rtState.endTs) return;
+  const remain = Math.ceil((rtState.endTs - Date.now())/1000);
+  rtState.remainSec = Math.max(0, remain);
+  if(rtState.remainSec<=0){
+    rtFinish(opts);
+    return;
+  }
+  rtRender();
+  rtScheduleAlarm();
+  if(!rtState.tick) rtStartTick();
+}
+function rtRestore(){
+  try{
+    const raw = localStorage.getItem(RT_STATE_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(!data || typeof data !== 'object') return;
+    rtState.title = data.title || 'Repos';
+    rtState.sub = data.sub || '—';
+    rtState.totalSec = Math.max(0, Math.round(data.totalSec||0));
+    rtState.visible = !!data.visible;
+    rtState.finished = !!data.finished;
+    if(data.running && data.endTs){
+      rtState.endTs = data.endTs;
+      const remain = Math.ceil((rtState.endTs - Date.now())/1000);
+      rtState.remainSec = Math.max(0, remain);
+      rtState.running = rtState.remainSec > 0;
+      rtState.finished = false;
+      rtState.needsNotify = rtState.remainSec <= 0;
+    } else {
+      rtState.running = false;
+      rtState.endTs = 0;
+      rtState.remainSec = Math.max(0, Math.round(data.remainSec||0));
+    }
+  }catch{}
+}
 
 // ✅ Audio unlock (iOS/WKWebView) : garantit que WebAudio peut jouer un son à la fin du chrono.
 let rtAudioCtx = null;
@@ -1425,9 +1514,11 @@ function rtShow(show){
   const el=document.getElementById('rt');
   if(!el) return;
   el.classList.toggle('on', !!show);
+  rtState.visible = !!show;
 
   // ✅ Mobile ergonomie : quand le chrono est visible, on passe en "mode repos" (plein écran via CSS)
   document.body.classList.toggle('rt_full', !!show);
+  rtPersist();
 }
 function rtFmt(sec){
   sec = Math.max(0, Math.round(sec||0));
@@ -1457,16 +1548,9 @@ function rtStartTick(){
     const remain = Math.ceil((rtState.endTs - now)/1000);
     rtState.remainSec = Math.max(0, remain);
     rtRender();
-   if(rtState.remainSec<=0){
-  rtState.running=false;
-  rtStopTick();
-  rtRender();
-
-  // ✅ signal fin : animation + alarme douce + toast
-  rtMarkDone();
-  if(rtGetSound()) rtBoxingBell();
-  toast('Repos terminé.');
-}
+    if(rtState.remainSec<=0){
+      rtFinish();
+    }
 
   }, 200);
 }
@@ -1477,24 +1561,33 @@ function rtSet(sec, title, sub){
   rtState.sub = sub || '—';
   rtState.running = false;
   rtState.endTs = 0;
+  rtState.finished = false;
   rtRender();
   rtShow(true);
+  rtPersist();
 }
 function rtPlay(){
   rtUnlockAudio();
   if(rtState.remainSec<=0) rtState.remainSec = rtState.totalSec || 0;
   rtState.running = true;
   rtState.endTs = Date.now() + rtState.remainSec*1000;
+  rtState.finished = false;
   rtRender();
   rtShow(true);
   rtStartTick();
+  rtScheduleAlarm();
+  rtPersist();
 }
 function rtPause(){
   if(!rtState.running) return;
   rtState.running = false;
   rtState.remainSec = Math.max(0, Math.ceil((rtState.endTs - Date.now())/1000));
+  rtState.endTs = 0;
+  rtState.finished = rtState.remainSec<=0;
   rtStopTick();
+  rtClearAlarm();
   rtRender();
+  rtPersist();
 }
 function rtToggle(){
   if(rtState.running) rtPause();
@@ -1504,7 +1597,9 @@ function rtReset(){
   rtPause();
   rtState.remainSec = rtState.totalSec || 0;
   document.getElementById('rt')?.classList.remove('done');
+  rtState.finished = false;
 rtRender();
+  rtPersist();
 }
 function rtAdd(deltaSec){
   const d = Math.round(deltaSec||0);
@@ -1514,13 +1609,16 @@ function rtAdd(deltaSec){
 
   if(rtState.running){
     rtState.endTs = Date.now() + rtState.remainSec*1000;
+    rtScheduleAlarm();
   }
   rtRender();
   rtShow(true);
+  rtPersist();
 }
 function rtClose(){
   rtPause();
   rtShow(false);
+  rtPersist();
 }
 
 function getSlotDefBySid(sid){
@@ -2717,10 +2815,31 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   show('home');
   renderHome();
+  rtRestore();
   rtRender();
+  if(rtState.visible) rtShow(true);
+  if(rtState.needsNotify){
+    rtFinish({silent:true, reason:'(pendant ton absence)'});
+    rtState.needsNotify = false;
+  } else if(rtState.running){
+    rtSyncNow({silent:true, reason:'(pendant ton absence)'});
+  }
   
   syncInSessionHints();
 rtUpdateSoundUI();
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden){
+      rtSyncNow({reason:'(pendant ton absence)'});
+    }
+  });
+  window.addEventListener('focus',()=>{
+    rtSyncNow({reason:'(pendant ton absence)'});
+  });
+  window.addEventListener('pageshow',()=>{
+    rtSyncNow({reason:'(pendant ton absence)'});
+  });
+  window.addEventListener('pagehide', rtPersist);
 
   // ✅ Micro animation : quand le bouton "Terminer" du bas entre dans l'écran, on le met en avant 1 fois
   try{

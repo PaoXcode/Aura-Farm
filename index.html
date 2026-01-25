@@ -1201,8 +1201,14 @@ function getActiveSess(){ return localStorage.getItem(ACTIVE_SESS_KEY) || ''; }
 function setActiveSess(L){ try{ localStorage.setItem(ACTIVE_SESS_KEY, String(L||'')); }catch{} }
 function clearActiveSess(){ try{ localStorage.removeItem(ACTIVE_SESS_KEY); }catch{} }
 
-const getLog=()=>jget(LOG_KEY,[]);
-const setLog=(x)=>jset(LOG_KEY,x);
+function normalizeLog(raw){
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw.filter(Boolean);
+  if(typeof raw==='object') return Object.values(raw).filter(Boolean);
+  return [];
+}
+const getLog=()=>normalizeLog(jget(LOG_KEY,[]));
+const setLog=(x)=>jset(LOG_KEY, normalizeLog(x));
 const getCfg=()=>jget(CFG_KEY,{});
 const setCfg=(x)=>jset(CFG_KEY,x);
 const newId=()=>String(Date.now())+'_'+String(Math.random()).slice(2,9);

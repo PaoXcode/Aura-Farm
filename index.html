@@ -833,6 +833,7 @@ label{
         <button class="btn" type="button" id="btnDone">Terminer • Enregistrer dans l’historique</button>
       </div>
     </div>
+    <div class="panel" id="lastSessionPanel" style="margin-top:12px"></div>
     <div id="exoList"></div>
     <div style="margin:20px 0;text-align:center">
       <div class="small" style="margin-bottom:8px;color:rgba(255,213,106,.95)">
@@ -2073,7 +2074,50 @@ function renderSession(L){
   const host=document.getElementById('exoList');
   host.innerHTML = S.slots.map(sd=>exoCard(L,sd)).join('');
   S.slots.forEach(sd=>syncEff(sd.sid));
+  renderLastSession(L);
   if(focusOn) renderFocus();
+}
+
+function renderLastSession(L){
+  const host=document.getElementById('lastSessionPanel');
+  if(!host) return;
+  const log=getLog().slice().sort((a,b)=>b.ts-a.ts);
+  const entry=log.find(e=>e.letter===L);
+  if(!entry){
+    host.innerHTML = `
+      <div style="font-weight:950">Dernière séance enregistrée</div>
+      <div class="small muted" style="margin-top:6px">Aucun historique pour cette séance pour le moment.</div>
+    `;
+    return;
+  }
+
+  const dt=new Date(entry.ts);
+  const title = `${dt.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})} ${dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
+  const volTxt = Object.entries(entry.vol||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${seriesFmt(v)}`).join(' · ')||'—';
+
+  const rows=(entry.items||[]).map(it=>{
+    const did=it.repsTot!=null;
+    const right=did
+      ? (it.unit==='reps'
+          ? `${it.repsTot} reps`
+          : `${it.repsTot} reps · ${it.load??'—'} ${it.unit||'kg'} · ${it.eff?effLabel(it.eff):''}`)
+      : (it.note ? '<span class="muted">Rappel</span>' : '<span class="muted">non renseigné</span>');
+    return `<tr>
+      <td style="width:40%">${escapeHtml(it.name)}<div class="small muted">${escapeHtml(it.muscle||'')}</div></td>
+      <td>${right}</td>
+    </tr>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div style="font-weight:950">Dernière séance enregistrée</div>
+    <div class="small" style="margin-top:6px">${title} <span class="muted">• ${escapeHtml(volTxt)}</span></div>
+    <div style="overflow:auto;margin-top:10px">
+      <table>
+        <thead><tr><th>Exercice</th><th>Résultat</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
 }
 
 // ============================

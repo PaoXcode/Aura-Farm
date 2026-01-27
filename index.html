@@ -1800,6 +1800,74 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday){
   return {action,nextLoad,nextRPS,why};
 }
 
+function rebuildDerivedStateFromLog(){
+  const log=getLog();
+  if(!log.length) return;
+  const byVid=new Map();
+  const variantByVid=new Map(allVariantsFlat().map(v=>[v.vid, v]));
+
+  for(const entry of log){
+    const items=entry?.items || [];
+    for(const item of items){
+      try{
+        if(!item || item.repsTot == null) continue;
+        if(item.note) continue;
+        if(!item.vid) continue;
+        const prev=byVid.get(item.vid);
+        if(!prev || (entry.ts || 0) > (prev.entry?.ts || 0)){
+          byVid.set(item.vid, {entry, item});
+        }
+      }catch{
+        continue;
+      }
+    }
+  }
+
+  for(const [vid, payload] of byVid.entries()){
+    try{
+      const entry=payload.entry;
+      const item=payload.item;
+      if(!item || !entry) continue;
+      const slotDef={
+        sets:item.sets,
+        lo:item.lo,
+        hi:item.hi,
+        rest:item.rest,
+        baseLoad:(item.load ?? 0),
+        note:false
+      };
+      const meta=variantByVid.get(item.vid);
+      const variant=meta
+        ? {vid:meta.vid, name:meta.name, unit:meta.unit || item.unit || 'kg', step:meta.step, pct:meta.pct}
+        : {vid:item.vid, name:item.name, unit:item.unit || 'kg', pct:2.5};
+      const eff=item.eff || 'OK';
+      const rx=decideNext(slotDef, variant, item.repsTot, eff, item.load ?? 0);
+      const isReps=(item.unit === 'reps') || (variant.unit === 'reps');
+      const performedLoad=isReps ? 0 : (item.load ?? 0);
+      const nextLoad=isReps ? (Number.isFinite(rx.nextLoad) ? rx.nextLoad : 0) : rx.nextLoad;
+
+      setLast(vid, {
+        performedTs: entry.ts,
+        performedLoad: performedLoad,
+        performedTotalReps: item.repsTot,
+        performedEff: eff,
+        nextLoad: nextLoad,
+        nextRepsPerSet: rx.nextRPS,
+      });
+      setState(vid, {failStreak:0});
+    }catch{
+      continue;
+    }
+  }
+}
+
+function hasAnyLastKey(){
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k && k.startsWith('last_')) return true;
+  }
+  return false;
+}
 
 function confirmLeaveSession(nextL){
   const active = getActiveSess();
@@ -2963,8 +3031,9 @@ function importData(file){
         saveDraft(chosen.letter, chosen.items);
       }
     }
-    const draftMsg = draftSessions.size ? ' + brouillon restauré' : '';
-    toast(`${sessions.size} séance(s) importée(s) (${importedRows} lignes)${draftMsg}.`);
+    rebuildDerivedStateFromLog();
+    toast('Import terminé. Progression reconstruite.');
+    if(current?.L) renderSession(current.L);
   };
   reader.onerror=()=>toast('Lecture du CSV impossible.');
   reader.readAsText(file);
@@ -3216,6 +3285,15 @@ rtUpdateSoundUI();
   }catch{}
 
   if(!localStorage.getItem(ONB_KEY)) openOnb();
+
+  const rebuildKey='rebuild_done_v1';
+  if(!localStorage.getItem(rebuildKey)){
+    const log=getLog();
+    if(log.length && !hasAnyLastKey()){
+      rebuildDerivedStateFromLog();
+      localStorage.setItem(rebuildKey,'1');
+    }
+  }
 });
 </script>
 </body>

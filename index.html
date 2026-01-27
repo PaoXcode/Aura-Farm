@@ -1920,12 +1920,13 @@ function openSession(L){
   renderSession(L);
   // ✅ restauration brouillon si existant
   const d=loadDraft();
-  if(d && Array.isArray(d)){
-    for(const it of d){
+  if(d && Array.isArray(d.items) && (!d.letter || d.letter===L)){
+    for(const it of d.items){
       const r=document.getElementById('reps_'+it.sid);
       const l=document.getElementById('load_'+it.sid);
       if(r && it.repsTot!=null) r.value=it.repsTot;
       if(l && it.load!=null) l.value=it.load;
+      if(it.eff) setEff(it.sid, it.eff);
     }
   }
   show('sess');
@@ -2125,7 +2126,7 @@ function validate(L, sid){
 
   toast('OK. Décision cohérente et expliquée.');
   // ✅ sauvegarde brouillon séance
-  try{ saveDraft(buildSessionSnapshot(L)); }catch{}
+  try{ saveDraft(L, buildSessionSnapshot(L)); }catch{}
   if(focusOn) renderFocus();
 }
 
@@ -2747,6 +2748,31 @@ function parseFrDate(dateStr, timeStr){
   return new Date(yyyy, mm-1, dd, hh, min, 0, 0);
 }
 
+function normalizeStatus(value){
+  const v=String(value||'').trim().toLowerCase();
+  if(!v) return '';
+  if(v.includes('brouillon') || v.includes('draft') || v.includes('en cours') || v.includes('encours') || v.includes('progress')) return 'draft';
+  return v;
+}
+
+function findSidForName(letter, name){
+  const S=PROGRAM[letter];
+  if(!S) return null;
+  const target=String(name||'').trim().toLowerCase();
+  if(!target) return null;
+  for(const sd of S.slots){
+    const variants=CATALOG[sd.slot]||[];
+    const names=[sd.defaultVid, ...variants.map(v=>v.vid)];
+    for(const vid of names){
+      const meta=variantMeta(sd, vid);
+      if(String(meta?.name||'').trim().toLowerCase()===target){
+        return sd.sid;
+      }
+    }
+  }
+  return null;
+}
+
 function importData(file){
   if(!file) return;
   const reader=new FileReader();
@@ -2772,6 +2798,9 @@ function importData(file){
     const idxUnit = map['unité'] ?? map['unite'];
     const idxEff = map['effort'];
     const idxRest = map['repos'];
+    const idxStatus = map['statut'] ?? map['type'];
+    const idxSid = map['sid'];
+    const idxVid = map['variante_vid'] ?? map['variant_vid'] ?? map['vid'];
 
     if([idxDate, idxTime, idxLetter, idxName, idxReps].some(v=>v==null)){
       toast('CSV non reconnu. Exporte depuis Aura Farm.');
@@ -2788,26 +2817,15 @@ function importData(file){
     }));
 
     const sessions=new Map();
+    const draftSessions=new Map();
     let importedRows=0;
     for(const row of rows){
+      const status = normalizeStatus(idxStatus!=null ? row[idxStatus] : '');
+      const isDraft = status === 'draft';
       const dateStr=row[idxDate];
       const timeStr=row[idxTime];
       const letter=row[idxLetter] || '?';
       const name=row[idxName] || '';
-      const repsVal=toNum(row[idxReps]);
-      if(!name || !Number.isFinite(repsVal)) continue;
-      const d=parseFrDate(dateStr, timeStr);
-      if(!d) continue;
-      const pad=n=>String(n).padStart(2,'0');
-      const keyDate=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-      const keyTime=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      const key=`${letter}_${keyDate}_${keyTime}`;
-      if(existingKeys.has(key)) continue;
-
-      if(!sessions.has(key)){
-        sessions.set(key,{letter, ts:d.getTime(), items:[]});
-      }
-
       const repsTarget=String(row[idxRepsTarget]||'').trim();
       let lo=null, hi=null;
       if(repsTarget.includes('-')){
@@ -2820,6 +2838,46 @@ function importData(file){
       const load = unit==='reps' ? null : toNum(row[idxLoad]);
       const eff = effFromLabel(row[idxEff]);
       const note = String(row[idxEff]||'').trim().toLowerCase()==='rappel';
+      const repsVal=toNum(row[idxReps]);
+
+      if(isDraft){
+        const sid = (idxSid!=null && row[idxSid]) ? String(row[idxSid]).trim() : findSidForName(letter, name);
+        if(!sid) continue;
+        const item={
+          sid:sid,
+          repsTot:Number.isFinite(repsVal)?repsVal:null,
+          load:Number.isFinite(load)?load:null,
+          eff:eff,
+          note:note,
+          unit:unit,
+          sets:toNum(row[idxSets]) || null,
+          lo:lo,
+          hi:hi,
+          rest:toNum(row[idxRest]) || null
+        };
+        if(idxVid!=null && row[idxVid]){
+          setVariantForSlot(sid, String(row[idxVid]).trim());
+        }
+        if(eff) setEff(sid, eff);
+        const key = letter || '?';
+        if(!draftSessions.has(key)) draftSessions.set(key,{letter:key, items:[]});
+        draftSessions.get(key).items.push(item);
+        importedRows++;
+        continue;
+      }
+
+      if(!name || !Number.isFinite(repsVal)) continue;
+      const d=parseFrDate(dateStr, timeStr);
+      if(!d) continue;
+      const pad=n=>String(n).padStart(2,'0');
+      const keyDate=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const keyTime=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const key=`${letter}_${keyDate}_${keyTime}`;
+      if(existingKeys.has(key)) continue;
+
+      if(!sessions.has(key)){
+        sessions.set(key,{letter, ts:d.getTime(), items:[]});
+      }
 
       sessions.get(key).items.push({
         sid:newId(),
@@ -2840,7 +2898,7 @@ function importData(file){
       importedRows++;
     }
 
-    if(!sessions.size){
+    if(!sessions.size && !draftSessions.size){
       toast('Aucune nouvelle séance importée.');
       return;
     }
@@ -2853,7 +2911,16 @@ function importData(file){
     }
     setLog(merged);
     renderStats();
-    toast(`${sessions.size} séance(s) importée(s) (${importedRows} lignes).`);
+    if(draftSessions.size){
+      const sortedDraft=[...draftSessions.values()].sort((a,b)=>b.items.length-a.items.length);
+      const chosen=sortedDraft[0];
+      if(chosen && chosen.letter){
+        setActiveSess(chosen.letter);
+        saveDraft(chosen.letter, chosen.items);
+      }
+    }
+    const draftMsg = draftSessions.size ? ' + brouillon restauré' : '';
+    toast(`${sessions.size} séance(s) importée(s) (${importedRows} lignes)${draftMsg}.`);
   };
   reader.onerror=()=>toast('Lecture du CSV impossible.');
   reader.readAsText(file);
@@ -2869,7 +2936,9 @@ function csvEscape(v){
 }
 function exportData(){
   const log = getLog().slice().sort((a,b)=>a.ts-b.ts);
-  if(!log.length){
+  const draft = loadDraft();
+  const hasDraft = !!(draft && Array.isArray(draft.items) && draft.items.length && (draft.letter || getActiveSess()));
+  if(!log.length && !hasDraft){
     toast('Aucune donnée à exporter.');
     return;
   }
@@ -2887,7 +2956,10 @@ function exportData(){
     'Unité',
     'Effort',
     'Volume_estimé',
-    'Repos'
+    'Repos',
+    'Statut',
+    'SID',
+    'Variante_vid'
   ];
   const lines = [header.map(csvEscape).join(';')];
 
@@ -2916,9 +2988,42 @@ function exportData(){
         unit,
         it.eff ? effLabel(it.eff) : (it.note ? 'Rappel' : ''),
         volume,
-        it.rest || ''
+        it.rest || '',
+        'Historique',
+        it.sid || '',
+        it.vid || ''
       ];
 
+      lines.push(row.map(csvEscape).join(';'));
+    }
+  }
+
+  if(hasDraft){
+    const exportLetter = draft.letter || getActiveSess() || '?';
+    const now = new Date();
+    const date = now.toLocaleDateString('fr-FR');
+    const heure = now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    for(const it of draft.items){
+      const unit = it.unit || 'kg';
+      const loadNum = (unit==='reps') ? null : (Number.isFinite(it.load) ? it.load : null);
+      const row = [
+        date,
+        heure,
+        exportLetter,
+        it.name || '',
+        it.muscle || '',
+        it.sets ?? '',
+        (it.lo!=null && it.hi!=null) ? `${it.lo}-${it.hi}` : '',
+        it.repsTot != null ? it.repsTot : '',
+        loadNum!=null ? loadNum : '',
+        unit,
+        it.eff ? effLabel(it.eff) : (it.note ? 'Rappel' : ''),
+        '',
+        it.rest || '',
+        'Brouillon',
+        it.sid || '',
+        it.vid || ''
+      ];
       lines.push(row.map(csvEscape).join(';'));
     }
   }
@@ -2945,11 +3050,17 @@ function exportData(){
 // ============================
 const DRAFT_KEY='paogramme_session_draft_v1';
 
-function saveDraft(items){
-  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(items)); }catch{}
+function saveDraft(letter, items){
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({letter:letter||'', items:items||[]})); }catch{}
 }
 function loadDraft(){
-  try{ return JSON.parse(localStorage.getItem(DRAFT_KEY)||'null'); }catch{ return null }
+  try{
+    const raw=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
+    if(!raw) return null;
+    if(Array.isArray(raw)) return {letter:getActiveSess()||'', items:raw};
+    if(raw.items && Array.isArray(raw.items)) return raw;
+    return null;
+  }catch{ return null }
 }
 function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
 

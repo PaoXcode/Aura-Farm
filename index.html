@@ -879,11 +879,14 @@ label{
       <h1 style="font-size:18px;font-weight:950;margin:0">Stats</h1>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Retour</button>
+        <button class="btn ghost" type="button" onclick="triggerJsonRestore()">Restaurer depuis une sauvegarde (JSON)</button>
+        <button class="btn ghost" type="button" onclick="exportFullBackup()">Sauvegarde complète (JSON)</button>
         <button class="btn ghost" type="button" onclick="triggerImport()">Importer</button>
         <button class="btn ghost" type="button" onclick="exportData()">Exporter</button>
       </div>
     </div>
     <input id="importCsv" type="file" accept=".csv,text/csv" style="display:none"/>
+    <input id="importJson" type="file" accept=".json,application/json" style="display:none"/>
 
     <div class="panel" style="margin-top:12px">
       <div style="font-weight:950">Séries semaine</div>
@@ -3040,6 +3043,88 @@ function importData(file){
 }
 
 // ============================
+// ✅ Sauvegarde complète JSON
+// ============================
+function exportFullBackup(){
+  const backup={
+    version:'v3',
+    exportedAt:Date.now(),
+    storage:{
+      log:localStorage.getItem('paogramme_log_v2'),
+      cfg:localStorage.getItem('paogramme_cfg_v2'),
+      last:Object.fromEntries(
+        Object.keys(localStorage)
+          .filter(k=>k.startsWith('last_'))
+          .map(k=>[k, localStorage.getItem(k)])
+      ),
+      state:Object.fromEntries(
+        Object.keys(localStorage)
+          .filter(k=>k.startsWith('state_'))
+          .map(k=>[k, localStorage.getItem(k)])
+      ),
+      rp10:Object.fromEntries(
+        Object.keys(localStorage)
+          .filter(k=>k.startsWith('rp10_'))
+          .map(k=>[k, localStorage.getItem(k)])
+      )
+    }
+  };
+  const blob=new Blob([JSON.stringify(backup)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='paogramme_backup.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Sauvegarde JSON téléchargée.');
+}
+
+function triggerJsonRestore(){
+  const input=document.getElementById('importJson');
+  if(!input) return;
+  input.value='';
+  input.click();
+}
+
+function restoreFullBackup(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    let payload=null;
+    try{
+      payload=JSON.parse(String(reader.result||''));
+    }catch{
+      toast('Sauvegarde JSON invalide.');
+      return;
+    }
+    if(!payload || typeof payload!=='object' || !payload.storage){
+      toast('Sauvegarde JSON invalide.');
+      return;
+    }
+    if(!confirm('Cette action remplacera toutes les données existantes.')) return;
+    try{
+      localStorage.clear();
+      if(payload.storage.log != null) localStorage.setItem('paogramme_log_v2', payload.storage.log);
+      if(payload.storage.cfg != null) localStorage.setItem('paogramme_cfg_v2', payload.storage.cfg);
+      const last=payload.storage.last || {};
+      const state=payload.storage.state || {};
+      const rp10=payload.storage.rp10 || {};
+      Object.entries(last).forEach(([k,v])=>{ if(k) localStorage.setItem(k, v); });
+      Object.entries(state).forEach(([k,v])=>{ if(k) localStorage.setItem(k, v); });
+      Object.entries(rp10).forEach(([k,v])=>{ if(k) localStorage.setItem(k, v); });
+    }catch{
+      toast('Sauvegarde JSON invalide.');
+      return;
+    }
+    location.reload();
+  };
+  reader.onerror=()=>toast('Lecture de la sauvegarde impossible.');
+  reader.readAsText(file);
+}
+
+// ============================
 // ✅ Export CSV (unique bouton Exporter)
 // ============================
 function csvEscape(v){
@@ -3234,6 +3319,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     importInput.addEventListener('change',(e)=>{
       const file=e.target.files && e.target.files[0];
       if(file) importData(file);
+    });
+  }
+  const importJson=document.getElementById('importJson');
+  if(importJson){
+    importJson.addEventListener('change',(e)=>{
+      const file=e.target.files && e.target.files[0];
+      if(file) restoreFullBackup(file);
     });
   }
 

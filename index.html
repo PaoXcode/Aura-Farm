@@ -50,6 +50,7 @@
     .toast.on{display:block}
     .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:9998;padding:14px}
     .overlay.on{display:flex}
+    #swapConfirm{z-index:10000}
     .box{width:min(760px,100%);border-radius:22px;border:1px solid rgba(255,213,106,.28);background:linear-gradient(180deg,rgba(17,17,17,.96),rgba(8,8,8,.96));box-shadow:0 28px 80px rgba(0,0,0,.9);padding:18px}
     .boxH{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
     .boxI{width:44px;height:44px;border-radius:16px;display:grid;place-items:center;font-weight:950;color:var(--g2);border:1px solid rgba(212,175,55,.55);background:radial-gradient(circle at 30% 30%,rgba(255,213,106,.55),rgba(212,175,55,.12) 55%,rgba(212,175,55,.05))}
@@ -958,6 +959,28 @@ label{
   </div>
 </div>
 
+<!-- Swap confirm overlay -->
+<div class="overlay" id="swapConfirm">
+  <div class="box">
+    <div class="boxH">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="boxI">⇄</div>
+        <div>
+          <div class="boxT">Changer d’exercice ?</div>
+          <div class="small" id="swapConfirmSub">—</div>
+        </div>
+      </div>
+      <button class="btn ghost" type="button" onclick="closeSwapConfirm()">Fermer</button>
+    </div>
+    <div class="boxP" id="swapConfirmMsg" style="margin-top:10px">—</div>
+    <div class="boxA">
+      <button class="btn" type="button" onclick="confirmSwapValidate()">Valider puis changer</button>
+      <button class="btn ghost" type="button" onclick="confirmSwapSkip()">Changer sans valider</button>
+      <button class="btn ghost" type="button" onclick="closeSwapConfirm()">Annuler</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Leave session confirm -->
 <div class="overlay" id="leaveSess">
@@ -1434,6 +1457,8 @@ let rtState = {
   visible:false,
   finished:false,
   needsNotify:false,
+  exerciseSid:null,
+  exerciseName:'',
 };
 
 const RT_STATE_KEY = 'paogramme_rt_state_v1';
@@ -1448,6 +1473,8 @@ function rtPersist(){
       endTs: rtState.endTs,
       visible: rtState.visible,
       finished: rtState.finished,
+      exerciseSid: rtState.exerciseSid,
+      exerciseName: rtState.exerciseName,
       savedAt: Date.now(),
     };
     localStorage.setItem(RT_STATE_KEY, JSON.stringify(payload));
@@ -1506,6 +1533,8 @@ function rtRestore(){
     rtState.totalSec = Math.max(0, Math.round(data.totalSec||0));
     rtState.visible = !!data.visible;
     rtState.finished = !!data.finished;
+    rtState.exerciseSid = data.exerciseSid || null;
+    rtState.exerciseName = data.exerciseName || '';
     if(data.running && data.endTs){
       rtState.endTs = data.endTs;
       const remain = Math.ceil((rtState.endTs - Date.now())/1000);
@@ -1657,6 +1686,8 @@ function startRestForSid(sid){
   const sec = Math.round(restMin*60);
   const vid = getVariantForSlot(sd.sid, sd.defaultVid);
   const v = variantMeta(sd, vid);
+  rtState.exerciseSid = sd.sid;
+  rtState.exerciseName = v.name || '';
   rtSet(sec, 'Repos', `${v.name} • ${sd.rest}`);
   rtPlay();
 }
@@ -1965,6 +1996,58 @@ function syncInSessionHints(){
 
 let focusPickSid=null;
 let focusSeance = true; // true = Focus séance, false = Focus exercice
+let exoInitial = {};
+let exoValidated = {};
+
+function resetExerciseProgressState(){
+  exoInitial = {};
+  exoValidated = {};
+}
+
+function getExerciseDisplayName(sid){
+  if(rtState.running && rtState.exerciseSid === sid && rtState.exerciseName){
+    return rtState.exerciseName;
+  }
+  const sd = getSlotDefBySid(sid);
+  if(!sd) return 'cet exercice';
+  const vid = getVariantForSlot(sd.sid, sd.defaultVid);
+  const v = variantMeta(sd, vid);
+  return v?.name || 'cet exercice';
+}
+
+function normalizeInputNumber(value){
+  const n = toNum(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isExerciseDirty(sid){
+  const repsEl = document.getElementById('reps_'+sid);
+  const loadEl = document.getElementById('load_'+sid);
+  const repsVal = repsEl ? normalizeInputNumber(repsEl.value) : null;
+  const loadVal = loadEl ? normalizeInputNumber(loadEl.value) : null;
+  const validated = exoValidated[sid];
+
+  if(validated){
+    const repsBase = Number.isFinite(validated.reps) && validated.reps > 0 ? validated.reps : null;
+    const loadBase = Number.isFinite(validated.load) ? validated.load : null;
+    const repsCur = repsVal && repsVal > 0 ? repsVal : null;
+    if(repsCur !== repsBase) return true;
+    if(loadEl && loadVal !== loadBase) return true;
+    return false;
+  }
+
+  if(repsVal && repsVal > 0) return true;
+  if(loadEl){
+    const initLoad = normalizeInputNumber(exoInitial?.[sid]?.load);
+    if(loadVal != null && initLoad != null && loadVal !== initLoad) return true;
+  }
+  return false;
+}
+
+function isExerciseInProgress(sid){
+  const timerActive = rtState.running && rtState.exerciseSid === sid;
+  return timerActive || isExerciseDirty(sid);
+}
 
 
 function show(view){
@@ -1994,6 +2077,7 @@ function goHome(){
 function openSession(L){
   syncInSessionHints();
   setActiveSess(L);
+  resetExerciseProgressState();
   current={L};
   const S=PROGRAM[L];
   document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span><span class="session-letter">${L}</span>`;
@@ -2048,6 +2132,7 @@ function variantMeta(slotDef, vid){
 // ============================
 // Swap UI
 // ============================
+let pendingSwap=null;
 function openSwap(sid){
   if(!current?.L) return;
   const S=PROGRAM[current.L];
@@ -2073,11 +2158,48 @@ function openSwap(sid){
   document.getElementById('swap').classList.add('on');
 }
 function closeSwap(){ document.getElementById('swap').classList.remove('on'); }
-function pickSwap(sid, vid){
+function closeSwapConfirm(){
+  document.getElementById('swapConfirm').classList.remove('on');
+  pendingSwap = null;
+}
+function openSwapConfirm(sid, vid){
+  pendingSwap = {sid, vid};
+  const msg = document.getElementById('swapConfirmMsg');
+  const sub = document.getElementById('swapConfirmSub');
+  const name = getExerciseDisplayName(sid);
+  if(sub) sub.textContent = `Exercice en cours : ${name}`;
+  if(msg) msg.textContent = `Tu es en train de faire « ${name} ». Que veux-tu faire ?`;
+  document.getElementById('swapConfirm').classList.add('on');
+}
+function applySwap(sid, vid){
   setVariantForSlot(sid, vid);
+  delete exoValidated[sid];
   toast('Variante changée. Historique conservé par exercice choisi.');
   if(current?.L) renderSession(current.L);
   closeSwap();
+}
+function confirmSwapValidate(){
+  if(!pendingSwap || !current?.L) return;
+  const {sid, vid} = pendingSwap;
+  const ok = validate(current.L, sid);
+  if(!ok){
+    closeSwapConfirm();
+    return;
+  }
+  applySwap(sid, vid);
+  closeSwapConfirm();
+}
+function confirmSwapSkip(){
+  if(!pendingSwap) return;
+  applySwap(pendingSwap.sid, pendingSwap.vid);
+  closeSwapConfirm();
+}
+function pickSwap(sid, vid){
+  if(isExerciseInProgress(sid)){
+    openSwapConfirm(sid, vid);
+    return;
+  }
+  applySwap(sid, vid);
 }
 
 // ============================
@@ -2156,6 +2278,14 @@ function renderSession(L){
   const host=document.getElementById('exoList');
   host.innerHTML = S.slots.map(sd=>exoCard(L,sd)).join('');
   S.slots.forEach(sd=>syncEff(sd.sid));
+  S.slots.forEach(sd=>{
+    const loadEl = document.getElementById('load_'+sd.sid);
+    const repsEl = document.getElementById('reps_'+sd.sid);
+    exoInitial[sd.sid] = {
+      load: loadEl ? loadEl.value : null,
+      reps: repsEl ? repsEl.value : null,
+    };
+  });
   renderLastSession(L);
   if(focusOn) renderFocus();
 }
@@ -2208,11 +2338,11 @@ function renderLastSession(L){
 function validate(L, sid){
   const S=PROGRAM[L];
   const slotDef=S.slots.find(x=>x.sid===sid);
-  if(!slotDef) return;
+  if(!slotDef) return false;
 
   if(slotDef.note){
     toast('Rappel technique: pas de validation/progression ici.');
-    return;
+    return false;
   }
 
   const vid=getVariantForSlot(slotDef.sid, slotDef.defaultVid);
@@ -2226,8 +2356,8 @@ function validate(L, sid){
   const res=document.getElementById('res_'+sid);
   const whyBox=document.getElementById('why_'+sid);
 
-  if(!Number.isFinite(totalReps) || totalReps<=0){ if(res) res.textContent='Entre tes reps, puis valide.'; return; }
-  if(unit!=='reps' && (!Number.isFinite(load))){ if(res) res.textContent='Charge invalide.'; return; }
+  if(!Number.isFinite(totalReps) || totalReps<=0){ if(res) res.textContent='Entre tes reps, puis valide.'; return false; }
+  if(unit!=='reps' && (!Number.isFinite(load))){ if(res) res.textContent='Charge invalide.'; return false; }
 
   const rx=decideNext(slotDef, v, totalReps, eff, load);
 
@@ -2239,6 +2369,7 @@ function validate(L, sid){
     nextLoad: rx.nextLoad,
     nextRepsPerSet: rx.nextRPS,
   });
+  exoValidated[sid] = {reps: totalReps, load: load};
 
   const todayLine = (unit==='reps') ? `${totalReps} reps · ${effLabel(eff)}` : `${totalReps} reps · ${load} ${unit} · ${effLabel(eff)}`;
   const nextLine  = (unit==='reps') ? `${slotDef.sets}×${rx.nextRPS}` : `${slotDef.sets}×${rx.nextRPS} · ${rx.nextLoad} ${unit}`;
@@ -2254,6 +2385,7 @@ function validate(L, sid){
   // ✅ sauvegarde brouillon séance
   try{ saveDraft(L, buildSessionSnapshot(L)); }catch{}
   if(focusOn) renderFocus();
+  return true;
 }
 
 function openFocusForSid(sid){

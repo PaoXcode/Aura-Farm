@@ -347,6 +347,17 @@ body.rt_full .rt.done{
   .rvLabel{ font-size: 15px; }
 }
 
+/* ✅ Stats : historique scrollable (limite l'affichage à ~4 séances) */
+.hist-scroll{
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+@media (max-width: 520px){
+  .hist-scroll{ max-height: 320px; }
+}
+
 
 /* ============================
    Aura Farm V3 — DA Apple-like
@@ -902,7 +913,7 @@ label{
     <div class="panel" style="margin-top:12px">
       <div style="font-weight:950">Historique</div>
       <div class="small" style="margin-top:6px">Tu peux modifier reps/charge si tu t’es trompé.</div>
-      <div id="hist"></div>
+      <div id="hist" class="hist-scroll"></div>
       <div class="small" style="margin-top:10px;color:rgba(255,213,106,.9)">⚠️ Conseil : exporte 1×/semaine pour te faire une sauvegarde CSV.</div>
       <div class="small" style="margin-top:6px;color:rgba(255,255,255,.72)">Astuce : importe un export CSV Aura Farm pour restaurer l’historique après une mise à jour.</div>
     </div>

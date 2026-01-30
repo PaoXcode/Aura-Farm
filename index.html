@@ -114,6 +114,7 @@
     .rtL{min-width:140px;max-width:42%;display:flex;flex-direction:column;gap:2px}
     .rtT{font-weight:950;color:rgba(255,213,106,.95);line-height:1.1}
     .rtS{font-size:12px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .rtHint{font-size:11px;color:rgba(255,255,255,.58);margin-top:2px}
     .rtC{
       font-weight:950;font-size:22px;letter-spacing:.02em;
       padding:6px 10px;border-radius:14px;
@@ -1042,6 +1043,7 @@ label{
   <div class="rtL">
     <div class="rtT" id="rtTitle">Repos</div>
     <div class="rtS" id="rtSub">—</div>
+    <div class="rtHint">Pour entendre l’alarme, garde l’app ouverte.</div>
   </div>
   <div class="rtC" id="rtClock">00:00</div>
   <div class="rtA">
@@ -1520,7 +1522,7 @@ function rtSyncNow(opts={}){
   }
   rtRender();
   rtScheduleAlarm();
-  if(!rtState.tick) rtStartTick();
+  rtStartTick();
 }
 function rtRestore(){
   try{
@@ -1591,21 +1593,24 @@ function rtRender(){
   rtUpdateSoundUI(); // ✅
 }
 function rtStopTick(){
-  if(rtState.tick){ clearInterval(rtState.tick); rtState.tick=null; }
+  if(rtState.tick){ clearTimeout(rtState.tick); rtState.tick=null; }
 }
 function rtStartTick(){
   rtStopTick();
-  rtState.tick = setInterval(()=>{
-    if(!rtState.running) return;
-    const now=Date.now();
-    const remain = Math.ceil((rtState.endTs - now)/1000);
-    rtState.remainSec = Math.max(0, remain);
-    rtRender();
-    if(rtState.remainSec<=0){
-      rtFinish();
-    }
-
-  }, 200);
+  if(!rtState.running || !rtState.endTs) return;
+  if(document.hidden) return;
+  const now = Date.now();
+  const remainMs = rtState.endTs - now;
+  const remainSec = Math.ceil(remainMs / 1000);
+  rtState.remainSec = Math.max(0, remainSec);
+  rtRender();
+  if(rtState.remainSec <= 0){
+    rtFinish();
+    return;
+  }
+  const remainder = remainMs % 1000;
+  const delay = Math.max(200, remainder === 0 ? 1000 : remainder);
+  rtState.tick = setTimeout(rtStartTick, delay);
 }
 function rtSet(sec, title, sub){
   rtState.totalSec = Math.max(0, Math.round(sec||0));
@@ -1663,6 +1668,7 @@ function rtAdd(deltaSec){
   if(rtState.running){
     rtState.endTs = Date.now() + rtState.remainSec*1000;
     rtScheduleAlarm();
+    rtStartTick();
   }
   rtRender();
   rtShow(true);
@@ -3478,19 +3484,22 @@ document.addEventListener('DOMContentLoaded',()=>{
   rtRender();
   if(rtState.visible) rtShow(true);
   if(rtState.needsNotify){
-    rtFinish({silent:true, reason:'(pendant ton absence)'});
+    rtFinish({reason:'(pendant ton absence)'});
     rtState.needsNotify = false;
   } else if(rtState.running){
-    rtSyncNow({silent:true, reason:'(pendant ton absence)'});
+    rtSyncNow({reason:'(pendant ton absence)'});
   }
   
   syncInSessionHints();
 rtUpdateSoundUI();
 
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden){
-      rtSyncNow({reason:'(pendant ton absence)'});
+    if(document.hidden){
+      rtStopTick();
+      rtPersist();
+      return;
     }
+    rtSyncNow({reason:'(pendant ton absence)'});
   });
   window.addEventListener('focus',()=>{
     rtSyncNow({reason:'(pendant ton absence)'});

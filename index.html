@@ -115,6 +115,7 @@
     .rtT{font-weight:950;color:rgba(255,213,106,.95);line-height:1.1}
     .rtS{font-size:12px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .rtHint{font-size:11px;color:rgba(255,255,255,.58);margin-top:2px}
+    .rtHintMode{font-weight:700;color:rgba(255,213,106,.85)}
     .rtC{
       font-weight:950;font-size:22px;letter-spacing:.02em;
       padding:6px 10px;border-radius:14px;
@@ -1044,6 +1045,7 @@ label{
     <div class="rtT" id="rtTitle">Repos</div>
     <div class="rtS" id="rtSub">—</div>
     <div class="rtHint">Pour entendre l’alarme, garde l’app ouverte.</div>
+    <div class="rtHint rtHintMode" id="rtHintMode">Mode plein écran actif.</div>
   </div>
   <div class="rtC" id="rtClock">00:00</div>
   <div class="rtA">
@@ -1051,6 +1053,7 @@ label{
     <button class="btn rtBtn" type="button" id="rtToggle" onclick="rtToggle()">Start</button>
     <button class="btn ghost rtBtn" type="button" onclick="rtAdd(15)">+15s</button>
     <button class="btn ghost rtBtn" type="button" onclick="rtReset()">Reset</button>
+    <button class="btn ghost rtBtn" type="button" id="rtViewBtn" onclick="rtToggleView()">Compact</button>
     <button class="btn ghost rtBtn" type="button" id="rtSoundBtn" onclick="rtToggleSound()">🔊</button>
 <button class="btn ghost rtBtn" type="button" onclick="rtClose()">✕</button> <!-- ✅ close -->
   </div>
@@ -1461,9 +1464,41 @@ let rtState = {
   needsNotify:false,
   exerciseSid:null,
   exerciseName:'',
+  fullscreen:true,
 };
 
 const RT_STATE_KEY = 'paogramme_rt_state_v1';
+const RT_VIEW_KEY = 'paogramme_rt_view_v1';
+function rtGetView(){
+  const v = localStorage.getItem(RT_VIEW_KEY);
+  return v == null ? true : (v === 'full');
+}
+function rtSetView(full){
+  rtState.fullscreen = !!full;
+  localStorage.setItem(RT_VIEW_KEY, rtState.fullscreen ? 'full' : 'compact');
+  rtApplyView();
+}
+function rtToggleView(){
+  rtSetView(!rtState.fullscreen);
+  toast(rtState.fullscreen ? 'Mode plein écran activé.' : 'Mode compact activé.');
+}
+function rtApplyView(){
+  document.body.classList.toggle('rt_full', !!(rtState.visible && rtState.fullscreen));
+  rtUpdateViewUI();
+}
+function rtUpdateViewUI(){
+  const b = document.getElementById('rtViewBtn');
+  const hint = document.getElementById('rtHintMode');
+  if(b){
+    b.textContent = rtState.fullscreen ? 'Compact' : 'Plein écran';
+    b.title = rtState.fullscreen ? 'Passer en mode compact' : 'Passer en plein écran';
+  }
+  if(hint){
+    hint.textContent = rtState.fullscreen
+      ? 'Mode plein écran actif.'
+      : 'Mode compact actif : la séance reste visible.';
+  }
+}
 function rtPersist(){
   try{
     const payload = {
@@ -1571,8 +1606,8 @@ function rtShow(show){
   el.classList.toggle('on', !!show);
   rtState.visible = !!show;
 
-  // ✅ Mobile ergonomie : quand le chrono est visible, on passe en "mode repos" (plein écran via CSS)
-  document.body.classList.toggle('rt_full', !!show);
+  // ✅ Mobile ergonomie : mode plein écran optionnel via préférences
+  rtApplyView();
   rtPersist();
 }
 function rtFmt(sec){
@@ -1591,6 +1626,7 @@ function rtRender(){
   if(c) c.textContent = rtFmt(rtState.remainSec);
   if(b) b.textContent = rtState.running ? 'Pause' : 'Start';
   rtUpdateSoundUI(); // ✅
+  rtUpdateViewUI();
 }
 function rtStopTick(){
   if(rtState.tick){ clearTimeout(rtState.tick); rtState.tick=null; }
@@ -3481,6 +3517,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   show('home');
   renderHome();
   rtRestore();
+  rtState.fullscreen = rtGetView();
   rtRender();
   if(rtState.visible) rtShow(true);
   if(rtState.needsNotify){

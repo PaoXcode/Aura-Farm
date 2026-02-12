@@ -1276,7 +1276,13 @@ function effToRir(e){return e==='EASY'?3:e==='HARD'?1:2}
 // per-slot effort persists
 const keyEff=(sid)=>`eff_${sid}`;
 const getEff=(sid)=>jget(keyEff(sid),'OK');
-function setEff(sid,eff){jset(keyEff(sid),eff); syncEff(sid)}
+function setEff(sid,eff){
+  jset(keyEff(sid),eff);
+  syncEff(sid);
+  if(current?.L){
+    try{ saveDraft(current.L, buildSessionSnapshot(current.L)); }catch{}
+  }
+}
 function syncEff(sid){
   const eff=getEff(sid);
   const wrap=document.getElementById('seg_'+sid);
@@ -2214,10 +2220,13 @@ function openSwapConfirm(sid, vid){
   document.getElementById('swapConfirm').classList.add('on');
 }
 function applySwap(sid, vid){
+  if(current?.L){
+    try{ saveDraft(current.L, buildSessionSnapshot(current.L)); }catch{}
+  }
   setVariantForSlot(sid, vid);
   delete exoValidated[sid];
   toast('Variante changée. Historique conservé par exercice choisi.');
-  if(current?.L) renderSession(current.L);
+  if(current?.L) renderSession(current.L, {keepInputs:true});
   closeSwap();
 }
 function confirmSwapValidate(){
@@ -2315,11 +2324,32 @@ function exoCard(L, slotDef){
   </div>`;
 }
 
-function renderSession(L){
+function renderSession(L, opts={}){
   const S=PROGRAM[L];
+  const keepInputs = !!opts.keepInputs;
+  const prev = keepInputs ? buildSessionSnapshot(L) : null;
+
   const host=document.getElementById('exoList');
   host.innerHTML = S.slots.map(sd=>exoCard(L,sd)).join('');
   S.slots.forEach(sd=>syncEff(sd.sid));
+
+  if(prev){
+    for(const it of prev){
+      const repsEl = document.getElementById('reps_'+it.sid);
+      const loadEl = document.getElementById('load_'+it.sid);
+      if(repsEl && Number.isFinite(it.repsTot)) repsEl.value = String(it.repsTot);
+      if(loadEl && Number.isFinite(it.load)) loadEl.value = String(it.load);
+    }
+  }
+
+  host.querySelectorAll('input[id^="reps_"],input[id^="load_"]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      if(current?.L){
+        try{ saveDraft(current.L, buildSessionSnapshot(current.L)); }catch{}
+      }
+    });
+  });
+
   S.slots.forEach(sd=>{
     const loadEl = document.getElementById('load_'+sd.sid);
     const repsEl = document.getElementById('reps_'+sd.sid);
@@ -2560,7 +2590,7 @@ function onRP10Input(vid, value){
   const n=toNum(value);
   setRP10(vid, n);
   toast('RP10 mis à jour.');
-  if(current?.L) renderSession(current.L);
+  if(current?.L) renderSession(current.L, {keepInputs:true});
 }
 
 function renderGoals(){

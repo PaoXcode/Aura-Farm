@@ -116,6 +116,26 @@
     .rtS{font-size:12px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .rtHint{font-size:11px;color:rgba(255,255,255,.58);margin-top:2px}
     .rtHintMode{font-weight:700;color:rgba(255,213,106,.85)}
+    .rtSets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .rtSetBtn{
+      appearance:none;border:1px solid rgba(255,213,106,.45);
+      background:linear-gradient(180deg,rgba(255,213,106,.35),rgba(212,175,55,.25));
+      color:#1a1a1a;
+      width:34px;height:34px;border-radius:10px;
+      font-weight:950;cursor:pointer;
+      transition:transform .08s ease,filter .18s ease,border-color .18s ease,opacity .18s ease;
+    }
+    .rtSetBtn:hover{filter:brightness(1.05)}
+    .rtSetBtn:active{transform:translateY(1px) scale(.98)}
+    .rtSetBtn.done{
+      background:rgba(140,140,140,.30);
+      border-color:rgba(180,180,180,.40);
+      color:rgba(255,255,255,.85);
+    }
+    .rtSetBtn.active{
+      outline:2px solid rgba(255,213,106,.58);
+      outline-offset:1px;
+    }
     .rtC{
       font-weight:950;font-size:22px;letter-spacing:.02em;
       padding:6px 10px;border-radius:14px;
@@ -195,6 +215,8 @@ html, body { touch-action: manipulation; }
   body.rt_full .rtL{ max-width:100%; min-width:0; }
   body.rt_full .rtT{ font-size:22px; }
   body.rt_full .rtS{ font-size:14px; white-space:normal; overflow:visible; text-overflow:clip; }
+  body.rt_full .rtSets{ justify-content:center; }
+  body.rt_full .rtSetBtn{ width:40px;height:40px;border-radius:12px;font-size:15px; }
   body.rt_full .rtC{ font-size:56px; padding:14px 12px; min-width:0; }
   body.rt_full .rtA{
     margin-left:0;
@@ -1044,6 +1066,7 @@ label{
   <div class="rtL">
     <div class="rtT" id="rtTitle">Repos</div>
     <div class="rtS" id="rtSub">—</div>
+    <div class="rtSets" id="rtSets" aria-label="Séries de l'exercice en cours"></div>
     <div class="rtHint">Pour entendre l’alarme, garde l’app ouverte.</div>
     <div class="rtHint rtHintMode" id="rtHintMode">Mode plein écran actif.</div>
   </div>
@@ -1470,6 +1493,9 @@ let rtState = {
   needsNotify:false,
   exerciseSid:null,
   exerciseName:'',
+  exerciseSets:0,
+  activeSet:null,
+  doneSets:{},
   fullscreen:true,
 };
 
@@ -1518,6 +1544,9 @@ function rtPersist(){
       finished: rtState.finished,
       exerciseSid: rtState.exerciseSid,
       exerciseName: rtState.exerciseName,
+      exerciseSets: rtState.exerciseSets,
+      activeSet: rtState.activeSet,
+      doneSets: rtState.doneSets,
       savedAt: Date.now(),
     };
     localStorage.setItem(RT_STATE_KEY, JSON.stringify(payload));
@@ -1543,8 +1572,14 @@ function rtFinish(opts={}){
   if(rtState.finished) return;
   rtState.running = false;
   rtState.finished = true;
+  if(rtState.exerciseSid && Number.isInteger(rtState.activeSet)){
+    const doneMap = rtGetDoneSetMap(rtState.exerciseSid);
+    doneMap[rtState.activeSet] = true;
+    rtSetDoneSetMap(rtState.exerciseSid, doneMap);
+  }
   rtState.remainSec = 0;
   rtState.endTs = 0;
+  rtState.activeSet = null;
   rtStopTick();
   rtClearAlarm();
   rtRender();
@@ -1578,6 +1613,9 @@ function rtRestore(){
     rtState.finished = !!data.finished;
     rtState.exerciseSid = data.exerciseSid || null;
     rtState.exerciseName = data.exerciseName || '';
+    rtState.exerciseSets = Math.max(0, Math.round(data.exerciseSets||0));
+    rtState.activeSet = Number.isInteger(data.activeSet) ? data.activeSet : null;
+    rtState.doneSets = (data.doneSets && typeof data.doneSets === 'object') ? data.doneSets : {};
     if(data.running && data.endTs){
       rtState.endTs = data.endTs;
       const remain = Math.ceil((rtState.endTs - Date.now())/1000);
@@ -1622,6 +1660,35 @@ function rtFmt(sec){
   const s = sec%60;
   return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
+function rtGetDoneSetMap(sid){
+  if(!sid) return {};
+  const map = rtState.doneSets[sid];
+  return (map && typeof map === 'object') ? map : {};
+}
+function rtSetDoneSetMap(sid, map){
+  if(!sid) return;
+  rtState.doneSets[sid] = map || {};
+}
+function rtRenderSets(){
+  const host = document.getElementById('rtSets');
+  if(!host) return;
+  const sid = rtState.exerciseSid;
+  const total = Math.max(0, Math.round(rtState.exerciseSets||0));
+  if(!sid || total<=0){
+    host.innerHTML = '';
+    host.style.display = 'none';
+    return;
+  }
+  host.style.display = 'flex';
+  const doneMap = rtGetDoneSetMap(sid);
+  const parts = [];
+  for(let i=1;i<=total;i++){
+    const done = !!doneMap[i];
+    const active = rtState.running && rtState.activeSet===i;
+    parts.push(`<button class="rtSetBtn ${done?'done':''} ${active?'active':''}" type="button" title="Série ${i}" onclick="rtStartSet(${i})">${i}</button>`);
+  }
+  host.innerHTML = parts.join('');
+}
 function rtRender(){
   const t=document.getElementById('rtTitle');
   const s=document.getElementById('rtSub');
@@ -1631,6 +1698,7 @@ function rtRender(){
   if(s) s.textContent = rtState.sub || '—';
   if(c) c.textContent = rtFmt(rtState.remainSec);
   if(b) b.textContent = rtState.running ? 'Pause' : 'Start';
+  rtRenderSets();
   rtUpdateSoundUI(); // ✅
   rtUpdateViewUI();
 }
@@ -1659,6 +1727,7 @@ function rtSet(sec, title, sub){
   rtState.remainSec = rtState.totalSec;
   rtState.title = title || 'Repos';
   rtState.sub = sub || '—';
+  rtState.activeSet = null;
   rtState.running = false;
   rtState.endTs = 0;
   rtState.finished = false;
@@ -1691,11 +1760,23 @@ function rtPause(){
 }
 function rtToggle(){
   if(rtState.running) rtPause();
-  else rtPlay();
+  else{
+    if(rtState.exerciseSid && rtState.exerciseSets>0 && !Number.isInteger(rtState.activeSet)){
+      const doneMap = rtGetDoneSetMap(rtState.exerciseSid);
+      let nextSet = null;
+      for(let i=1;i<=rtState.exerciseSets;i++){ if(!doneMap[i]){ nextSet=i; break; } }
+      if(nextSet!=null){
+        rtStartSet(nextSet);
+        return;
+      }
+    }
+    rtPlay();
+  }
 }
 function rtReset(){
   rtPause();
   rtState.remainSec = rtState.totalSec || 0;
+  rtState.activeSet = null;
   document.getElementById('rt')?.classList.remove('done');
   rtState.finished = false;
 rtRender();
@@ -1718,6 +1799,7 @@ function rtAdd(deltaSec){
 }
 function rtClose(){
   rtPause();
+  rtState.activeSet = null;
   rtShow(false);
   rtPersist();
 }
@@ -1736,8 +1818,35 @@ function startRestForSid(sid){
   const v = variantMeta(sd, vid);
   rtState.exerciseSid = sd.sid;
   rtState.exerciseName = v.name || '';
+  rtState.exerciseSets = sd.sets || 0;
+  if(!rtState.doneSets[sd.sid]) rtState.doneSets[sd.sid] = {};
   rtSet(sec, 'Repos', `${v.name} • ${sd.rest}`);
+  const doneMap = rtGetDoneSetMap(sd.sid);
+  const doneCount = Object.values(doneMap).filter(Boolean).length;
+  if(rtState.exerciseSets>0 && doneCount >= rtState.exerciseSets){
+    rtSetDoneSetMap(sd.sid, {});
+  }
+  const freshMap = rtGetDoneSetMap(sd.sid);
+  let nextSet = null;
+  for(let i=1;i<=rtState.exerciseSets;i++){ if(!freshMap[i]){ nextSet=i; break; } }
+  if(nextSet!=null) rtStartSet(nextSet);
+}
+function rtStartSet(setNumber){
+  const sid = rtState.exerciseSid;
+  if(!sid) return;
+  const setNo = Math.max(1, Math.round(setNumber||1));
+  rtState.activeSet = setNo;
+  const sd = getSlotDefBySid(sid);
+  if(!sd) return;
+  const sec = Math.round(parseRestMin(sd.rest) * 60);
+  rtState.totalSec = sec;
+  rtState.remainSec = sec;
+  rtState.running = false;
+  rtState.endTs = 0;
+  rtState.finished = false;
   rtPlay();
+  rtRender();
+  rtPersist();
 }
 // ✅ Sound preference (persistant)
 const RT_SOUND_KEY = 'paogramme_rt_sound_v1';

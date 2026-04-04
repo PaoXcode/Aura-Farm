@@ -1669,11 +1669,14 @@ function rtSetDoneSetMap(sid, map){
   if(!sid) return;
   rtState.doneSets[sid] = map || {};
 }
+function rtRestSetCount(totalSets){
+  return Math.max(0, Math.round(totalSets||0) - 1);
+}
 function rtRenderSets(){
   const host = document.getElementById('rtSets');
   if(!host) return;
   const sid = rtState.exerciseSid;
-  const total = Math.max(0, Math.round(rtState.exerciseSets||0));
+  const total = rtRestSetCount(rtState.exerciseSets);
   if(!sid || total<=0){
     host.innerHTML = '';
     host.style.display = 'none';
@@ -1761,10 +1764,11 @@ function rtPause(){
 function rtToggle(){
   if(rtState.running) rtPause();
   else{
-    if(rtState.exerciseSid && rtState.exerciseSets>0 && !Number.isInteger(rtState.activeSet)){
+    const totalRestSets = rtRestSetCount(rtState.exerciseSets);
+    if(rtState.exerciseSid && totalRestSets>0 && !Number.isInteger(rtState.activeSet)){
       const doneMap = rtGetDoneSetMap(rtState.exerciseSid);
       let nextSet = null;
-      for(let i=1;i<=rtState.exerciseSets;i++){ if(!doneMap[i]){ nextSet=i; break; } }
+      for(let i=1;i<=totalRestSets;i++){ if(!doneMap[i]){ nextSet=i; break; } }
       if(nextSet!=null){
         rtStartSet(nextSet);
         return;
@@ -1821,20 +1825,21 @@ function startRestForSid(sid){
   rtState.exerciseSets = sd.sets || 0;
   if(!rtState.doneSets[sd.sid]) rtState.doneSets[sd.sid] = {};
   rtSet(sec, 'Repos', `${v.name} • ${sd.rest}`);
+  const restSetCount = rtRestSetCount(rtState.exerciseSets);
   const doneMap = rtGetDoneSetMap(sd.sid);
   const doneCount = Object.values(doneMap).filter(Boolean).length;
-  if(rtState.exerciseSets>0 && doneCount >= rtState.exerciseSets){
-    rtSetDoneSetMap(sd.sid, {});
-  }
-  const freshMap = rtGetDoneSetMap(sd.sid);
   let nextSet = null;
-  for(let i=1;i<=rtState.exerciseSets;i++){ if(!freshMap[i]){ nextSet=i; break; } }
+  if(restSetCount>0 && doneCount < restSetCount){
+    for(let i=1;i<=restSetCount;i++){ if(!doneMap[i]){ nextSet=i; break; } }
+  }
   if(nextSet!=null) rtStartSet(nextSet);
 }
 function rtStartSet(setNumber){
   const sid = rtState.exerciseSid;
   if(!sid) return;
-  const setNo = Math.max(1, Math.round(setNumber||1));
+  const maxSet = rtRestSetCount(rtState.exerciseSets);
+  if(maxSet<=0) return;
+  const setNo = Math.min(maxSet, Math.max(1, Math.round(setNumber||1)));
   rtState.activeSet = setNo;
   const sd = getSlotDefBySid(sid);
   if(!sd) return;
@@ -3607,6 +3612,8 @@ function closeDone(){
     }
   }
   document.getElementById('done').classList.remove('on');
+  rtState.doneSets = {};
+  rtPersist();
   clearActiveSess();
   goHome();
 }

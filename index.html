@@ -2160,10 +2160,12 @@ let focusPickSid=null;
 let focusSeance = true; // true = Focus séance, false = Focus exercice
 let exoInitial = {};
 let exoValidated = {};
+let sessionProgressBaselineByVid = {};
 
 function resetExerciseProgressState(){
   exoInitial = {};
   exoValidated = {};
+  sessionProgressBaselineByVid = {};
 }
 
 function getExerciseDisplayName(sid){
@@ -2533,6 +2535,20 @@ function validate(L, sid){
 
   const vid=getVariantForSlot(slotDef.sid, slotDef.defaultVid);
   const v=variantMeta(slotDef, vid);
+
+  // Une séance = un seul pas d'avancement par exercice.
+  // Si on revalide après correction, on recalcule depuis la base du début
+  // de séance au lieu d'empiler plusieurs avancées.
+  if(!sessionProgressBaselineByVid[v.vid]){
+    sessionProgressBaselineByVid[v.vid] = {
+      last: getLast(v.vid, slotDef.baseLoad),
+      state: getState(v.vid),
+    };
+  } else {
+    const baseline = sessionProgressBaselineByVid[v.vid];
+    setLast(v.vid, baseline.last);
+    setState(v.vid, baseline.state);
+  }
 
   const unit=v.unit||'kg';
   const load = (unit==='reps') ? 0 : toNum(document.getElementById('load_'+sid)?.value);

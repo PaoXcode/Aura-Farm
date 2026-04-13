@@ -71,10 +71,40 @@
     .focusHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
 
     /* Swap UI */
-    .pick{display:grid;gap:10px;margin-top:12px}
-    .pick .opt{width:100%;text-align:left;border-radius:16px;border:1px solid rgba(255,213,106,.18);background:rgba(255,255,255,.02);padding:12px 12px;cursor:pointer;font-weight:950}
-    .pick .opt:hover{border-color:rgba(255,213,106,.55);background:rgba(212,175,55,.08)}
-    .pick .opt small{display:block;margin-top:4px;font-weight:700;color:rgba(255,255,255,.72)}
+    .swapTools{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .swapSearch{
+      flex:1 1 240px;
+      min-width:180px;
+      margin-top:0;
+      border:1px solid rgba(255,213,106,.22);
+      background:rgba(0,0,0,.34);
+      color:var(--t);
+    }
+    .swapFilter{
+      appearance:none;
+      border:1px solid rgba(255,213,106,.28);
+      background:rgba(255,255,255,.03);
+      color:var(--t);
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .swapFilter.on{
+      border-color:rgba(255,213,106,.72);
+      background:rgba(212,175,55,.14);
+      color:var(--g2);
+    }
+    .pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;max-height:min(52vh,500px);overflow:auto;padding-right:4px}
+    .pick .opt{width:100%;text-align:left;border-radius:16px;border:1px solid rgba(255,213,106,.18);background:rgba(255,255,255,.02);padding:12px 12px;cursor:pointer;font-weight:950;transition:transform .12s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+    .pick .opt:hover{transform:translateY(-1px);border-color:rgba(255,213,106,.55);background:rgba(212,175,55,.08);box-shadow:0 14px 30px rgba(0,0,0,.45)}
+    .pick .opt.current{border-color:rgba(255,213,106,.72);background:rgba(212,175,55,.15)}
+    .pick .opt small{display:block;margin-top:6px;font-weight:700;color:rgba(255,255,255,.72)}
+    .pick .opt .swapTag{display:inline-flex;margin-top:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid rgba(255,213,106,.25);color:rgba(255,213,106,.88);background:rgba(212,175,55,.08)}
+    .swapEmpty{grid-column:1/-1;padding:16px;border-radius:14px;border:1px dashed rgba(255,213,106,.28);text-align:center;color:var(--m)}
+    @media (max-width:700px){
+      .pick{grid-template-columns:1fr;max-height:56vh}
+    }
     .exoNameRow{display:flex;align-items:center;gap:10px}
     .swapBadge{
       display:inline-flex;align-items:center;justify-content:center;
@@ -976,6 +1006,12 @@ label{
       <button class="btn ghost" type="button" onclick="closeSwap()">Fermer</button>
     </div>
     <div class="boxP" id="swapB" style="margin-top:10px">Même logique, même groupe musculaire. Historique conservé par exercice choisi.</div>
+    <div class="swapTools">
+      <input id="swapSearch" class="swapSearch" type="text" placeholder="Recherche rapide (barre, haltères, machine…)" oninput="renderSwapOptions()"/>
+      <button id="swapFilterAll" class="swapFilter on" type="button" onclick="setSwapFilter('all')">Tous</button>
+      <button id="swapFilterMachine" class="swapFilter" type="button" onclick="setSwapFilter('machine')">Machines</button>
+      <button id="swapFilterFree" class="swapFilter" type="button" onclick="setSwapFilter('free')">Libres</button>
+    </div>
     <div class="pick" id="swapList"></div>
     <div class="boxA">
       <button class="btn" type="button" onclick="closeSwap()">OK</button>
@@ -2305,6 +2341,36 @@ function variantMeta(slotDef, vid){
 // Swap UI
 // ============================
 let pendingSwap=null;
+let swapState={sid:null,list:[],curVid:null,filter:'all',query:''};
+function swapBucket(name=''){
+  const n=(name||'').toLowerCase();
+  if(n.includes('smith') || n.includes('machine') || n.includes('convergent') || n.includes('poulie') || n.includes('cable')) return 'machine';
+  return 'free';
+}
+function setSwapFilter(filter){
+  swapState.filter=filter;
+  ['all','machine','free'].forEach(k=>{
+    document.getElementById(`swapFilter${k==='all'?'All':k==='machine'?'Machine':'Free'}`)?.classList.toggle('on', k===filter);
+  });
+  renderSwapOptions();
+}
+function renderSwapOptions(){
+  const host=document.getElementById('swapList');
+  if(!host) return;
+  const q=(document.getElementById('swapSearch')?.value || '').trim().toLowerCase();
+  swapState.query=q;
+  const list=swapState.list
+    .filter(o=>swapState.filter==='all' || o.bucket===swapState.filter)
+    .filter(o=>!q || o.name.toLowerCase().includes(q) || (o.unit||'').toLowerCase().includes(q));
+  host.innerHTML = list.map(o=>{
+    const on = o.vid===swapState.curVid;
+    return `<button class="opt ${on?'current':''}" type="button" onclick="pickSwap('${swapState.sid}','${o.vid}')">
+      ${on?'✅ ':''}${escapeHtml(o.name)}
+      <small>${escapeHtml(o.unit||'kg')}</small>
+      <span class="swapTag">${o.bucket==='machine'?'Machine / guidé':'Poids libres'}</span>
+    </button>`;
+  }).join('') || `<div class="swapEmpty">Aucun résultat. Essaie un autre mot-clé.</div>`;
+}
 function openSwap(sid){
   if(!current?.L) return;
   const S=PROGRAM[current.L];
@@ -2318,18 +2384,21 @@ function openSwap(sid){
   document.getElementById('swapT').textContent = 'Choisir une variante';
   document.getElementById('swapS').textContent = `${sd.muscle} • ${sd.sets} séries • Reps ${sd.lo}–${sd.hi}`;
 
-  const host=document.getElementById('swapList');
-  host.innerHTML = list.map(o=>{
-    const on = o.vid===cur.vid;
-    return `<button class="opt" type="button" onclick="pickSwap('${sd.sid}','${o.vid}')">
-      ${on?'✅ ':''}${escapeHtml(o.name)}
-      <small>${escapeHtml(o.unit||'kg')}</small>
-    </button>`;
-  }).join('') || `<div class="small">Aucune variante disponible.</div>`;
+  swapState.sid=sd.sid;
+  swapState.curVid=cur.vid;
+  swapState.filter='all';
+  swapState.list=list.map(o=>({...o,bucket:swapBucket(o.name)}));
+  const search=document.getElementById('swapSearch');
+  if(search) search.value='';
+  setSwapFilter('all');
 
   document.getElementById('swap').classList.add('on');
+  setTimeout(()=>document.getElementById('swapSearch')?.focus(), 20);
 }
-function closeSwap(){ document.getElementById('swap').classList.remove('on'); }
+function closeSwap(){
+  document.getElementById('swap').classList.remove('on');
+  swapState={sid:null,list:[],curVid:null,filter:'all',query:''};
+}
 function closeSwapConfirm(){
   document.getElementById('swapConfirm').classList.remove('on');
   pendingSwap = null;

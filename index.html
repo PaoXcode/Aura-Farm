@@ -99,9 +99,22 @@
     .pick .opt{width:100%;text-align:left;border-radius:16px;border:1px solid rgba(255,213,106,.18);background:rgba(255,255,255,.02);padding:12px 12px;cursor:pointer;font-weight:950;transition:transform .12s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
     .pick .opt:hover{transform:translateY(-1px);border-color:rgba(255,213,106,.55);background:rgba(212,175,55,.08);box-shadow:0 14px 30px rgba(0,0,0,.45)}
     .pick .opt.current{border-color:rgba(255,213,106,.72);background:rgba(212,175,55,.15)}
+    .pick .opt.reco{box-shadow:0 0 0 1px rgba(255,213,106,.10),0 14px 30px rgba(0,0,0,.38)}
     .pick .opt small{display:block;margin-top:6px;font-weight:700;color:rgba(255,255,255,.72)}
-    .pick .opt .swapTag{display:inline-flex;margin-top:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid rgba(255,213,106,.25);color:rgba(255,213,106,.88);background:rgba(212,175,55,.08)}
+    .swapTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .swapName{display:flex;align-items:center;gap:8px;min-width:0}
+    .swapIcon{width:22px;height:22px;border-radius:8px;display:grid;place-items:center;background:rgba(212,175,55,.16);border:1px solid rgba(255,213,106,.24);font-size:12px;flex:0 0 auto}
+    .swapNameText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .swapTagWrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .pick .opt .swapTag{display:inline-flex;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid rgba(255,213,106,.25);color:rgba(255,213,106,.88);background:rgba(212,175,55,.08)}
+    .pick .opt .swapTag.reco{border-color:rgba(122,210,152,.34);color:rgba(159,240,189,.95);background:rgba(64,180,108,.15)}
     .swapEmpty{grid-column:1/-1;padding:16px;border-radius:14px;border:1px dashed rgba(255,213,106,.28);text-align:center;color:var(--m)}
+    .swapCount{margin-top:8px;font-size:12px;color:rgba(255,255,255,.75)}
+    @keyframes swapIn{
+      from{opacity:0;transform:translateY(5px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .pick .opt{animation:swapIn .26s ease both}
     @media (max-width:700px){
       .pick{grid-template-columns:1fr;max-height:56vh}
     }
@@ -1012,6 +1025,7 @@ label{
       <button id="swapFilterMachine" class="swapFilter" type="button" onclick="setSwapFilter('machine')">Machines</button>
       <button id="swapFilterFree" class="swapFilter" type="button" onclick="setSwapFilter('free')">Libres</button>
     </div>
+    <div class="swapCount" id="swapCount">—</div>
     <div class="pick" id="swapList"></div>
     <div class="boxA">
       <button class="btn" type="button" onclick="closeSwap()">OK</button>
@@ -2341,11 +2355,20 @@ function variantMeta(slotDef, vid){
 // Swap UI
 // ============================
 let pendingSwap=null;
-let swapState={sid:null,list:[],curVid:null,filter:'all',query:''};
+let swapState={sid:null,list:[],curVid:null,filter:'all',query:'',defaultVid:null};
 function swapBucket(name=''){
   const n=(name||'').toLowerCase();
   if(n.includes('smith') || n.includes('machine') || n.includes('convergent') || n.includes('poulie') || n.includes('cable')) return 'machine';
   return 'free';
+}
+function swapMetaByName(name=''){
+  const n=(name||'').toLowerCase();
+  if(n.includes('halt')) return {icon:'🏋️', label:'Haltères', bucket:'free'};
+  if(n.includes('barre')) return {icon:'🏋️‍♂️', label:'Barre', bucket:'free'};
+  if(n.includes('smith')) return {icon:'🛤️', label:'Smith', bucket:'machine'};
+  if(n.includes('poulie') || n.includes('cable')) return {icon:'🧲', label:'Poulie', bucket:'machine'};
+  if(n.includes('convergent') || n.includes('machine')) return {icon:'⚙️', label:'Machine', bucket:'machine'};
+  return {icon:'🎯', label:'Variante', bucket:swapBucket(name)};
 }
 function setSwapFilter(filter){
   swapState.filter=filter;
@@ -2357,17 +2380,39 @@ function setSwapFilter(filter){
 function renderSwapOptions(){
   const host=document.getElementById('swapList');
   if(!host) return;
+  const count=document.getElementById('swapCount');
   const q=(document.getElementById('swapSearch')?.value || '').trim().toLowerCase();
   swapState.query=q;
-  const list=swapState.list
+  const filtered=swapState.list
     .filter(o=>swapState.filter==='all' || o.bucket===swapState.filter)
     .filter(o=>!q || o.name.toLowerCase().includes(q) || (o.unit||'').toLowerCase().includes(q));
-  host.innerHTML = list.map(o=>{
+  const list=filtered.sort((a,b)=>{
+    const aCur= a.vid===swapState.curVid ? 0 : 1;
+    const bCur= b.vid===swapState.curVid ? 0 : 1;
+    if(aCur!==bCur) return aCur-bCur;
+    const aReco= a.vid===swapState.defaultVid ? 0 : 1;
+    const bReco= b.vid===swapState.defaultVid ? 0 : 1;
+    if(aReco!==bReco) return aReco-bReco;
+    return a.name.localeCompare(b.name,'fr',{sensitivity:'base'});
+  });
+  if(count){
+    count.textContent = `${list.length} variante${list.length>1?'s':''} affichée${list.length>1?'s':''} sur ${swapState.list.length}`;
+  }
+  host.innerHTML = list.map((o,idx)=>{
     const on = o.vid===swapState.curVid;
-    return `<button class="opt ${on?'current':''}" type="button" onclick="pickSwap('${swapState.sid}','${o.vid}')">
-      ${on?'✅ ':''}${escapeHtml(o.name)}
+    const reco = o.vid===swapState.defaultVid;
+    return `<button class="opt ${on?'current':''} ${reco?'reco':''}" style="animation-delay:${Math.min(idx*22,180)}ms" type="button" onclick="pickSwap('${swapState.sid}','${o.vid}')">
+      <div class="swapTop">
+        <div class="swapName">
+          <span class="swapIcon">${o.icon}</span>
+          <span class="swapNameText">${on?'✅ ':''}${escapeHtml(o.name)}</span>
+        </div>
+      </div>
       <small>${escapeHtml(o.unit||'kg')}</small>
-      <span class="swapTag">${o.bucket==='machine'?'Machine / guidé':'Poids libres'}</span>
+      <div class="swapTagWrap">
+        <span class="swapTag">${escapeHtml(o.equipLabel)}</span>
+        ${reco?'<span class="swapTag reco">Recommandé</span>':''}
+      </div>
     </button>`;
   }).join('') || `<div class="swapEmpty">Aucun résultat. Essaie un autre mot-clé.</div>`;
 }
@@ -2387,7 +2432,11 @@ function openSwap(sid){
   swapState.sid=sd.sid;
   swapState.curVid=cur.vid;
   swapState.filter='all';
-  swapState.list=list.map(o=>({...o,bucket:swapBucket(o.name)}));
+  swapState.defaultVid=sd.defaultVid;
+  swapState.list=list.map(o=>{
+    const meta=swapMetaByName(o.name);
+    return {...o,bucket:meta.bucket,icon:meta.icon,equipLabel:meta.label};
+  });
   const search=document.getElementById('swapSearch');
   if(search) search.value='';
   setSwapFilter('all');
@@ -2397,7 +2446,7 @@ function openSwap(sid){
 }
 function closeSwap(){
   document.getElementById('swap').classList.remove('on');
-  swapState={sid:null,list:[],curVid:null,filter:'all',query:''};
+  swapState={sid:null,list:[],curVid:null,filter:'all',query:'',defaultVid:null};
 }
 function closeSwapConfirm(){
   document.getElementById('swapConfirm').classList.remove('on');

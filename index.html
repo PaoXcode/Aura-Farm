@@ -43,6 +43,10 @@
     .sbtn:active{transform:translateY(1px) scale(.99)}
     .sbtn.on{border-color:rgba(255,213,106,.75);background:rgba(212,175,55,.14);color:var(--g2)}
     .small{font-size:12px;color:var(--m)}
+    .setGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-top:8px}
+    .setCell{padding:8px;border-radius:12px;border:1px solid rgba(255,213,106,.2);background:rgba(255,255,255,.02)}
+    .setCell b{display:block;font-size:11px;color:rgba(255,213,106,.9);margin-bottom:6px}
+    .setCell input{margin-top:0;padding:8px 9px}
     .res{margin-top:10px;font-weight:950;font-size:13px;color:var(--g2);white-space:pre-line}
     .why{margin-top:8px;border:1px solid rgba(255,213,106,.18);border-radius:14px;background:rgba(255,255,255,.02);padding:10px 12px;font-size:12px;color:rgba(255,255,255,.9)}
     .why b{color:rgba(255,213,106,.92)}
@@ -1907,6 +1911,8 @@ function rtStartSet(setNumber){
   rtState.running = false;
   rtState.endTs = 0;
   rtState.finished = false;
+  const setInput = document.getElementById(`setreps_${sid}_${setNo}`);
+  if(setInput) setInput.focus();
   rtPlay();
   rtRender();
   rtPersist();
@@ -2520,6 +2526,12 @@ function exoCard(L, slotDef){
   const goal = (unit==='reps')
     ? `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi}`
     : `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi} • ${planLoad} ${unit}`;
+  const setInputs = Array.from({length:slotDef.sets},(_,i)=>`
+    <div class="setCell">
+      <b>Série ${i+1}</b>
+      <input id="setreps_${slotDef.sid}_${i+1}" type="number" inputmode="numeric" placeholder="${targetRPS}" oninput="syncSetRepsTotal('${slotDef.sid}', ${slotDef.sets})"/>
+    </div>
+  `).join('');
 
   return `
   <div class="exo" id="exo_${slotDef.sid}">
@@ -2548,9 +2560,10 @@ function exoCard(L, slotDef){
       <input id="load_${slotDef.sid}" type="number" value="${planLoad}" inputmode="decimal"/>
     </label>`}
 
-    <label>Reps totales (${slotDef.sets} séries)
-      <input id="reps_${slotDef.sid}" type="number" placeholder="ex : ${slotDef.sets*slotDef.hi}" inputmode="numeric"/>
-    </label>
+    <label>Reps par série (${slotDef.sets} séries)</label>
+    <div class="setGrid">${setInputs}</div>
+    <div class="small" style="margin-top:8px">Total calculé automatiquement : <b id="repsTotView_${slotDef.sid}">0</b> reps</div>
+    <input id="reps_${slotDef.sid}" type="hidden" value="0"/>
 
     ${slotDef.note?`<div class="res">${escapeHtml(slotDef.note)}</div>`:`
       <div class="seg" id="seg_${slotDef.sid}">
@@ -2581,6 +2594,8 @@ function renderSession(L, opts={}){
       const loadEl = document.getElementById('load_'+it.sid);
       if(repsEl && Number.isFinite(it.repsTot)) repsEl.value = String(it.repsTot);
       if(loadEl && Number.isFinite(it.load)) loadEl.value = String(it.load);
+      const sd = PROGRAM[L].slots.find(x=>x.sid===it.sid);
+      if(sd && Number.isFinite(it.repsTot)) spreadTotalRepsToSets(it.sid, sd.sets, it.repsTot);
     }
   }
 
@@ -2602,6 +2617,36 @@ function renderSession(L, opts={}){
   });
   renderLastSession(L);
   if(focusOn) renderFocus();
+}
+
+function getSetRepsTotal(sid, sets){
+  let total = 0;
+  for(let i=1;i<=sets;i++){
+    const v = toNum(document.getElementById(`setreps_${sid}_${i}`)?.value);
+    if(Number.isFinite(v) && v>0) total += v;
+  }
+  return total;
+}
+function syncSetRepsTotal(sid, sets){
+  const total = getSetRepsTotal(sid, sets);
+  const hidden = document.getElementById('reps_'+sid);
+  const view = document.getElementById('repsTotView_'+sid);
+  if(hidden) hidden.value = String(total||0);
+  if(view) view.textContent = String(total||0);
+  if(current?.L){
+    try{ saveDraft(current.L, buildSessionSnapshot(current.L)); }catch{}
+  }
+}
+function spreadTotalRepsToSets(sid, sets, total){
+  const each = Math.floor(total/sets);
+  let rem = total - each*sets;
+  for(let i=1;i<=sets;i++){
+    const val = each + (rem>0?1:0);
+    rem = Math.max(0, rem-1);
+    const inp = document.getElementById(`setreps_${sid}_${i}`);
+    if(inp) inp.value = val>0 ? String(val) : '';
+  }
+  syncSetRepsTotal(sid, sets);
 }
 
 function renderLastSession(L){
@@ -2789,9 +2834,8 @@ const vid=getVariantForSlot(next.sid,next.defaultVid);
     <div class="goal">Objectif • ${goalLine}</div>
     <div class="small" style="margin-top:8px">Dernière (référence) : ${refLine}</div>
 
-    <label style="margin-top:12px">Reps totales
-      <input id="f_reps" type="number" inputmode="numeric" placeholder="ex : ${next.sets*next.hi}" value="${document.getElementById('reps_'+next.sid)?.value||''}">
-    </label>
+    <div class="small" style="margin-top:12px">Saisis les reps directement dans les cases <b>Série 1..${next.sets}</b> sur la carte de l’exercice.</div>
+    <div class="small" style="margin-top:4px">Total actuel : <b>${toNum(document.getElementById('reps_'+next.sid)?.value)||0}</b> reps</div>
 
     <button class="btn ghost" type="button" style="margin-top:10px" onclick="startRestForSid('${next.sid}')">⏱ Lancer le repos (${next.rest})</button>
 
@@ -2812,11 +2856,8 @@ const vid=getVariantForSlot(next.sid,next.defaultVid);
   `;
 }
 function syncFocusToCard(sid){
-  const v=toNum(document.getElementById('f_reps')?.value);
-  if(Number.isFinite(v)){
-    const inp=document.getElementById('reps_'+sid);
-    if(inp) inp.value=String(v);
-  }
+  const sd = getSlotDefBySid(sid);
+  if(sd) syncSetRepsTotal(sid, sd.sets);
 }
 
 // ============================

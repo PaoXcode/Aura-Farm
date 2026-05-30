@@ -1572,7 +1572,15 @@ function rtSetView(full){
   localStorage.setItem(RT_VIEW_KEY, rtState.fullscreen ? 'full' : 'compact');
   rtApplyView();
 }
+function rtBlurActiveField(){
+  const active = document.activeElement;
+  if(!active) return;
+  const tag = active.tagName;
+  const isTextField = tag === 'INPUT' || tag === 'TEXTAREA' || active.isContentEditable;
+  if(isTextField) active.blur();
+}
 function rtToggleView(){
+  rtBlurActiveField();
   rtSetView(!rtState.fullscreen);
   toast(rtState.fullscreen ? 'Mode plein écran activé.' : 'Mode compact activé.');
 }
@@ -1824,6 +1832,7 @@ function rtPause(){
   rtPersist();
 }
 function rtToggle(){
+  rtBlurActiveField();
   if(rtState.running) rtPause();
   else{
     const totalRestSets = rtRestSetCount(rtState.exerciseSets);
@@ -1840,15 +1849,17 @@ function rtToggle(){
   }
 }
 function rtReset(){
+  rtBlurActiveField();
   rtPause();
   rtState.remainSec = rtState.totalSec || 0;
   rtState.activeSet = null;
   document.getElementById('rt')?.classList.remove('done');
   rtState.finished = false;
-rtRender();
+  rtRender();
   rtPersist();
 }
 function rtAdd(deltaSec){
+  rtBlurActiveField();
   const d = Math.round(deltaSec||0);
 
   // ✅ Ajustement PONCTUEL : on ne modifie pas la durée de base (totalSec)
@@ -1864,6 +1875,7 @@ function rtAdd(deltaSec){
   rtPersist();
 }
 function rtClose(){
+  rtBlurActiveField();
   rtPause();
   rtState.activeSet = null;
   rtShow(false);
@@ -1897,6 +1909,7 @@ function startRestForSid(sid){
   if(nextSet!=null) rtStartSet(nextSet);
 }
 function rtStartSet(setNumber){
+  rtBlurActiveField();
   const sid = rtState.exerciseSid;
   if(!sid) return;
   const maxSet = rtRestSetCount(rtState.exerciseSets);
@@ -1911,8 +1924,6 @@ function rtStartSet(setNumber){
   rtState.running = false;
   rtState.endTs = 0;
   rtState.finished = false;
-  const setInput = document.getElementById(`setreps_${sid}_${setNo}`);
-  if(setInput) setInput.focus();
   rtPlay();
   rtRender();
   rtPersist();
@@ -1935,6 +1946,7 @@ function rtUpdateSoundUI(){
   b.classList.toggle('on', on);
 }
 function rtToggleSound(){
+  rtBlurActiveField();
   const on = !rtGetSound();
   rtSetSound(on);
   rtUpdateSoundUI();
@@ -3828,6 +3840,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('statsBtn').addEventListener('click',openStats);
   document.getElementById('goalsBtn').addEventListener('click',openGoals);
   document.getElementById('sessionsBtn').addEventListener('click',goHome);
+  const rtEl=document.getElementById('rt');
+  if(rtEl){
+    rtEl.addEventListener('pointerdown', rtBlurActiveField, {passive:true});
+    rtEl.addEventListener('touchstart', rtBlurActiveField, {passive:true});
+  }
+
   const importInput=document.getElementById('importCsv');
   if(importInput){
     importInput.addEventListener('change',(e)=>{

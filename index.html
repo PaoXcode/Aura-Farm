@@ -1640,12 +1640,17 @@ function rtScheduleAlarm(){
 function rtFinish(opts={}){
   const {silent=false, reason='' } = opts;
   if(rtState.finished) return;
+  const completedRestSet = Number.isInteger(rtState.activeSet) ? rtState.activeSet : null;
+  const completedSid = rtState.exerciseSid || null;
+  const nextInputSet = (completedRestSet != null && rtState.exerciseSets)
+    ? Math.min(rtState.exerciseSets, completedRestSet + 1)
+    : null;
   rtState.running = false;
   rtState.finished = true;
-  if(rtState.exerciseSid && Number.isInteger(rtState.activeSet)){
-    const doneMap = rtGetDoneSetMap(rtState.exerciseSid);
-    doneMap[rtState.activeSet] = true;
-    rtSetDoneSetMap(rtState.exerciseSid, doneMap);
+  if(completedSid && completedRestSet != null){
+    const doneMap = rtGetDoneSetMap(completedSid);
+    doneMap[completedRestSet] = true;
+    rtSetDoneSetMap(completedSid, doneMap);
   }
   rtState.remainSec = 0;
   rtState.endTs = 0;
@@ -1654,6 +1659,10 @@ function rtFinish(opts={}){
   rtClearAlarm();
   rtRender();
   rtMarkDone();
+  if(completedSid && nextInputSet){
+    focusPendingSet = {sid: completedSid, set: nextInputSet};
+    if(focusOn) renderFocus({focusSet: nextInputSet});
+  }
   if(!silent && rtGetSound()) rtBoxingBell();
   toast(reason ? `Repos terminé ${reason}.` : 'Repos terminé.');
   rtPersist();
@@ -2234,6 +2243,7 @@ function syncInSessionHints(){
 
 let focusPickSid=null;
 let focusSeance = true; // true = Focus séance, false = Focus exercice
+let focusPendingSet = null;
 let exoInitial = {};
 let exoValidated = {};
 let sessionProgressBaselineByVid = {};
@@ -2289,6 +2299,57 @@ function isExerciseInProgress(sid){
   return timerActive || isExerciseDirty(sid);
 }
 
+function getFirstEmptySetNumber(sid, sets){
+  for(let i=1;i<=sets;i++){
+    const v = toNum(document.getElementById(`setreps_${sid}_${i}`)?.value);
+    if(!Number.isFinite(v) || v<=0) return i;
+  }
+  return null;
+}
+
+function focusSetInputId(sid, setNumber){
+  return `f_setreps_${sid}_${setNumber}`;
+}
+
+function syncFocusSetRepsToCard(sid, sets){
+  for(let i=1;i<=sets;i++){
+    const focusInput = document.getElementById(focusSetInputId(sid, i));
+    const cardInput = document.getElementById(`setreps_${sid}_${i}`);
+    if(focusInput && cardInput) cardInput.value = focusInput.value;
+  }
+  syncSetRepsTotal(sid, sets);
+  const totalView = document.getElementById(`f_repsTotView_${sid}`);
+  if(totalView){
+    const total = toNum(document.getElementById('reps_'+sid)?.value);
+    totalView.textContent = String((Number.isFinite(total) && total>0) ? total : 0);
+  }
+}
+
+function handleFocusSetRepsInput(sid, sets){
+  syncFocusSetRepsToCard(sid, sets);
+  const nextEmpty = getFirstEmptySetNumber(sid, sets);
+  focusPendingSet = nextEmpty ? {sid, set: nextEmpty} : null;
+}
+
+function focusNextSetFromInput(sid, sets, currentSet, ev){
+  if(ev.key !== 'Enter') return;
+  ev.preventDefault();
+  syncFocusSetRepsToCard(sid, sets);
+  const next = getFirstEmptySetNumber(sid, sets) || Math.min(sets, currentSet + 1);
+  document.getElementById(focusSetInputId(sid, next))?.focus();
+}
+
+function focusSetInputSoon(sid, setNumber){
+  if(!sid || !setNumber) return;
+  setTimeout(()=>{
+    const el = document.getElementById(focusSetInputId(sid, setNumber));
+    if(el){
+      el.focus();
+      try{ el.select(); }catch{}
+    }
+  }, 60);
+}
+
 
 function show(view){
   document.getElementById('vHome').style.display=view==='home'?'block':'none';
@@ -2322,7 +2383,7 @@ function openSession(L){
   const S=PROGRAM[L];
   document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span><span class="session-letter">${L}</span>`;
   document.getElementById('btnDone').onclick=()=>openDone();
-  document.getElementById('focusBtn').onclick=()=>{ focusSeance=true; focusPickSid=null; toggleFocus(true); };
+  document.getElementById('focusBtn').onclick=()=>{ focusSeance=true; focusPickSid=null; focusPendingSet=null; toggleFocus(true); };
   document.getElementById('sessMeta').textContent = `${S.sub} ~50 min`;
   renderSession(L);
   // ✅ restauration brouillon si existant
@@ -2643,8 +2704,10 @@ function syncSetRepsTotal(sid, sets){
   const total = getSetRepsTotal(sid, sets);
   const hidden = document.getElementById('reps_'+sid);
   const view = document.getElementById('repsTotView_'+sid);
+  const focusView = document.getElementById('f_repsTotView_'+sid);
   if(hidden) hidden.value = String(total||0);
   if(view) view.textContent = String(total||0);
+  if(focusView) focusView.textContent = String(total||0);
   if(current?.L){
     try{ saveDraft(current.L, buildSessionSnapshot(current.L)); }catch{}
   }
@@ -2777,6 +2840,7 @@ function openFocusForSid(sid){
   focusSeance=false;
   // ✅ Permet de lancer le focus à partir de l'exercice choisi
   focusPickSid = sid || null;
+  focusPendingSet = null;
   if(!focusOn) toggleFocus(true);
   else renderFocus();
 }
@@ -2793,7 +2857,7 @@ function toggleFocus(on){
 }
 
 
-function renderFocus(){
+function renderFocus(opts={}){
   if(!current?.L) return;
   const S=PROGRAM[current.L];
 
@@ -2819,7 +2883,7 @@ function renderFocus(){
     if(todo) next = todo;
     else next = actives[actives.length-1] || next;
   }
-const vid=getVariantForSlot(next.sid,next.defaultVid);
+  const vid=getVariantForSlot(next.sid,next.defaultVid);
   const v=variantMeta(next,vid);
   const last=getLast(v.vid,next.baseLoad);
   const unit=v.unit||'kg';
@@ -2842,12 +2906,32 @@ const vid=getVariantForSlot(next.sid,next.defaultVid);
     ? `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi})`
     : `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi}) · ${planLoad} ${unit}`;
 
+  const firstEmptySet = getFirstEmptySetNumber(next.sid, next.sets);
+  const pendingSet = (focusPendingSet?.sid === next.sid && focusPendingSet.set) ? focusPendingSet.set : null;
+  const setToFocus = opts.focusSet || pendingSet || firstEmptySet || next.sets;
+  const setInputs = Array.from({length:next.sets},(_,i)=>{
+    const setNo = i+1;
+    const cardVal = document.getElementById(`setreps_${next.sid}_${setNo}`)?.value || '';
+    const isPrompt = setNo === setToFocus;
+    return `
+      <div class="setCell" style="${isPrompt?'border-color:rgba(255,213,106,.72);background:rgba(212,175,55,.10)':''}">
+        <b>${isPrompt?'👉 ':''}Série ${setNo}</b>
+        <input id="${focusSetInputId(next.sid, setNo)}" type="number" inputmode="numeric" placeholder="${targetRPS}" value="${escapeHtml(cardVal)}" oninput="handleFocusSetRepsInput('${next.sid}', ${next.sets})" onkeydown="focusNextSetFromInput('${next.sid}', ${next.sets}, ${setNo}, event)"/>
+      </div>`;
+  }).join('');
+  const currentTotal = toNum(document.getElementById('reps_'+next.sid)?.value)||0;
+  const inputHint = firstEmptySet
+    ? `Saisis la <b>série ${firstEmptySet}</b> ici, sans quitter le focus.`
+    : `Toutes les séries sont renseignées : tu peux valider l’exercice.`;
+
   document.getElementById('fBody').innerHTML = `
     <div class="goal">Objectif • ${goalLine}</div>
     <div class="small" style="margin-top:8px">Dernière (référence) : ${refLine}</div>
 
-    <div class="small" style="margin-top:12px">Saisis les reps directement dans les cases <b>Série 1..${next.sets}</b> sur la carte de l’exercice.</div>
-    <div class="small" style="margin-top:4px">Total actuel : <b>${toNum(document.getElementById('reps_'+next.sid)?.value)||0}</b> reps</div>
+    <div class="small" style="margin-top:12px">${inputHint}</div>
+    <label style="margin-top:10px">Reps par série (${next.sets} séries)</label>
+    <div class="setGrid">${setInputs}</div>
+    <div class="small" style="margin-top:8px">Total calculé automatiquement : <b id="f_repsTotView_${next.sid}">${currentTotal}</b> reps</div>
 
     <button class="btn ghost" type="button" style="margin-top:10px" onclick="startRestForSid('${next.sid}')">⏱ Lancer le repos (${next.rest})</button>
 
@@ -2866,10 +2950,11 @@ const vid=getVariantForSlot(next.sid,next.defaultVid);
     ` : ``}
 
   `;
+  focusSetInputSoon(next.sid, setToFocus);
 }
 function syncFocusToCard(sid){
   const sd = getSlotDefBySid(sid);
-  if(sd) syncSetRepsTotal(sid, sd.sets);
+  if(sd) syncFocusSetRepsToCard(sid, sd.sets);
 }
 
 // ============================

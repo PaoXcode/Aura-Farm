@@ -2307,6 +2307,16 @@ function getFirstEmptySetNumber(sid, sets){
   return null;
 }
 
+function areExerciseSetsComplete(sid, sets){
+  return !!sets && getFirstEmptySetNumber(sid, sets) == null;
+}
+
+function areAllActiveExerciseSetsComplete(slots){
+  return (slots||[])
+    .filter(sd=>!sd.note)
+    .every(sd=>areExerciseSetsComplete(sd.sid, sd.sets));
+}
+
 function focusSetInputId(sid, setNumber){
   return `f_setreps_${sid}_${setNumber}`;
 }
@@ -2804,6 +2814,13 @@ function validate(L, sid){
   const res=document.getElementById('res_'+sid);
   const whyBox=document.getElementById('why_'+sid);
 
+  if(!areExerciseSetsComplete(sid, slotDef.sets)){
+    const missingSet = getFirstEmptySetNumber(sid, slotDef.sets);
+    if(res) res.textContent = missingSet
+      ? `Renseigne toutes les séries avant de valider (série ${missingSet} manquante).`
+      : 'Renseigne toutes les séries avant de valider.';
+    return false;
+  }
   if(!Number.isFinite(totalReps) || totalReps<=0){ if(res) res.textContent='Entre tes reps, puis valide.'; return false; }
   if(unit!=='reps' && (!Number.isFinite(load))){ if(res) res.textContent='Charge invalide.'; return false; }
 
@@ -2872,13 +2889,12 @@ function renderFocus(opts={}){
     if(pick) next = pick;
   }
 
-  // Focus SÉANCE : on prend le prochain non rempli. Si tout est rempli, on reste sur le dernier.
+  // Focus SÉANCE : on prend le prochain exercice dont toutes les séries ne sont pas renseignées.
+  // Le total de reps peut être > 0 après une seule série : ça ne suffit pas à terminer l'exercice.
   if(focusSeance){
     let todo = null;
-    for(const sd of S.slots){
-      if(sd.note) continue;
-      const v=toNum(document.getElementById('reps_'+sd.sid)?.value);
-      if(!Number.isFinite(v) || v<=0){ todo = sd; break; }
+    for(const sd of actives){
+      if(!areExerciseSetsComplete(sd.sid, sd.sets)){ todo = sd; break; }
     }
     if(todo) next = todo;
     else next = actives[actives.length-1] || next;
@@ -2899,7 +2915,7 @@ function renderFocus(opts={}){
 
   document.getElementById('fTitle').textContent = v.name;
   const idxAct = Math.max(1, actives.findIndex(x=>x.sid===next.sid)+1);
-  const isLastFocusSeance = (focusSeance===true) && (actives[actives.length-1]?.sid===next.sid) && actives.every(sd=>{const vv=toNum(document.getElementById('reps_'+sd.sid)?.value); return Number.isFinite(vv) && vv>0;});
+  const isLastFocusSeance = (focusSeance===true) && (actives[actives.length-1]?.sid===next.sid) && areAllActiveExerciseSetsComplete(actives);
   document.getElementById('fSub').textContent = `Focus ${focusPickSid?'(sélectionné)':'(auto)'} • Exo ${idxAct}/${totalAct} • ${next.muscle} • ${next.sets}×${targetRPS} • Reps ${next.lo}–${next.hi} • repos ${next.rest}`;
 
   const goalLine = (unit==='reps')

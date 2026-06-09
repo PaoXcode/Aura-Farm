@@ -66,6 +66,10 @@
     th{color:rgba(255,213,106,.9);font-weight:950}
     .bar{height:10px;border-radius:999px;border:1px solid rgba(255,213,106,.22);background:rgba(255,255,255,.03);overflow:hidden}
     .bar > i{display:block;height:100%;background:linear-gradient(90deg,rgba(255,213,106,.7),rgba(212,175,55,.55))}
+    .loadHint{margin-top:6px;color:rgba(255,213,106,.9)}
+    .fatigueBadge{display:inline-flex;align-items:center;justify-content:center;min-width:74px;padding:5px 9px;border-radius:999px;border:1px solid rgba(255,213,106,.24);background:rgba(255,255,255,.03);font-size:12px;font-weight:950;color:rgba(255,255,255,.9)}
+    .fatigueBadge.warn{border-color:rgba(255,213,106,.42);background:rgba(212,175,55,.10);color:var(--g2)}
+    .fatigueBadge.hot{border-color:rgba(255,77,77,.42);background:rgba(255,77,77,.10);color:#ffb3b3}
     details{border:1px solid rgba(255,213,106,.16);border-radius:16px;padding:10px 12px;background:rgba(255,255,255,.02)}
     summary{cursor:pointer;font-weight:950}
     .muted{color:var(--m)}
@@ -1326,6 +1330,8 @@ const CFG_KEY='paogramme_cfg_v2';
 const LAST_KEY=(vid)=>`last_${vid}`;
 const STATE_KEY=(vid)=>`state_${vid}`;
 const RP10_KEY=(vid)=>`rp10_${vid}`;
+const RECORDS_KEY=(vid)=>`records_${vid}`;
+const NEARBY_HISTORY_MAX_AGE_MS=180*24*60*60*1000;
 
 const ACTIVE_SESS_KEY='paogramme_active_session_v1';
 function getActiveSess(){ return localStorage.getItem(ACTIVE_SESS_KEY) || ''; }
@@ -1408,14 +1414,113 @@ function estimateLoadFromRP10(rp10, repsTarget){
   const w = oneRM/(1+(reps/30));
   return w;
 }
-function suggestedStartLoad(slotDef, variant, targetRPS){
+function findSlotByVid(vid){
+  for(const [slot, list] of Object.entries(CATALOG)){
+    if((list||[]).some(ex=>ex.vid===vid)) return slot;
+  }
+  return null;
+}
+function comparableUnit(a,b){
+  const ua=String(a||'kg').toLowerCase();
+  const ub=String(b||'kg').toLowerCase();
+  if(ua==='reps' || ub==='reps') return false;
+  if(ua===ub) return true;
+  return (ua.includes('kg') && ub.includes('kg') && !ua.includes('assistance') && !ub.includes('assistance'));
+}
+function recentHistoryForVariant(vid){
+  const last=getLast(vid, NaN);
+  if(last?.performedTs && Number.isFinite(last.performedLoad)){
+    return {vid, load:last.performedLoad, ts:last.performedTs, source:'last'};
+  }
+  let best=null;
+  for(const entry of getLog()){
+    for(const it of (entry.items||[])){
+      if(it?.vid!==vid || !Number.isFinite(it.load)) continue;
+      if(!best || (entry.ts||0)>(best.ts||0)) best={vid, load:it.load, ts:entry.ts||0, source:'log'};
+    }
+  }
+  return best;
+}
+function findNearbyVariantHistory(slotDef, variant){
+  const unit=variant.unit||'kg';
+  if(unit==='reps') return null;
+  const slots=[slotDef.slot, findSlotByVid(variant.vid)].filter(Boolean);
+  const seen=new Set();
+  const candidates=[];
+  for(const slot of slots){
+    for(const ex of (CATALOG[slot]||[])){
+      if(!ex?.vid || ex.vid===variant.vid || seen.has(ex.vid)) continue;
+      seen.add(ex.vid);
+      if(!comparableUnit(unit, ex.unit||'kg')) continue;
+      const h=recentHistoryForVariant(ex.vid);
+      const recent=h && (!h.ts || (Date.now()-h.ts)<=NEARBY_HISTORY_MAX_AGE_MS);
+      if(recent && Number.isFinite(h.load) && h.load>0) candidates.push({...h, unit:ex.unit||'kg', slot});
+    }
+  }
+  candidates.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  return candidates[0] || null;
+}
+function suggestedStartLoadInfo(slotDef, variant, targetRPS){
   const unit=(variant.unit||'kg');
-  if(unit==='reps') return 0;
+  if(unit==='reps') return {load:0, source:'bodyweight'};
+
+  const nearby=findNearbyVariantHistory(slotDef, variant);
+  if(nearby){
+    return {load:roundSmart(nearby.load*0.90), source:'nearby', vid:nearby.vid};
+  }
+
   const rp10 = getRP10(variant.vid);
   if(Number.isFinite(rp10) && rp10>0){
-    return roundSmart(estimateLoadFromRP10(rp10, targetRPS));
+    return {load:roundSmart(estimateLoadFromRP10(rp10, targetRPS)), source:'rp10'};
   }
-  return slotDef.baseLoad;
+  return {load:slotDef.baseLoad, source:'base'};
+}
+function suggestedStartLoad(slotDef, variant, targetRPS){
+  return suggestedStartLoadInfo(slotDef, variant, targetRPS).load;
+}
+function e1RM(load, reps){
+  if(!Number.isFinite(load) || load<=0 || !Number.isFinite(reps) || reps<=0) return null;
+  return load*(1+(reps/30));
+}
+function getRecords(vid){ return jget(RECORDS_KEY(vid), {bestLoad:null,bestTotalReps:null,bestVolume:null,bestE1RM:null}); }
+function setRecords(vid, rec){ jset(RECORDS_KEY(vid), rec||{}); }
+function updatePersonalRecords(variant, totalReps, load){
+  const unit=variant?.unit||'kg';
+  const weighted=unit!=='reps' && Number.isFinite(load) && load>0;
+  const rec=getRecords(variant.vid);
+  const hit=[];
+  const next={...rec};
+
+  if(Number.isFinite(totalReps) && totalReps>0 && (!Number.isFinite(rec.bestTotalReps) || totalReps>rec.bestTotalReps)){
+    next.bestTotalReps=totalReps; hit.push('reps');
+  }
+  if(weighted && (!Number.isFinite(rec.bestLoad) || load>rec.bestLoad)){
+    next.bestLoad=load; hit.push('charge');
+  }
+  if(weighted){
+    const volume=load*totalReps;
+    if(Number.isFinite(volume) && (!Number.isFinite(rec.bestVolume) || volume>rec.bestVolume)){
+      next.bestVolume=volume; hit.push('volume');
+    }
+    const est=e1RM(load, totalReps);
+    if(Number.isFinite(est) && (!Number.isFinite(rec.bestE1RM) || est>rec.bestE1RM)){
+      next.bestE1RM=est; hit.push('performance estimée');
+    }
+  }
+
+  if(hit.length) setRecords(variant.vid, next);
+  return hit;
+}
+function recordMessage(hits){
+  const keep=(hits||[]).filter(Boolean);
+  if(!keep.length) return null;
+  if(keep.length===1){
+    if(keep[0]==='charge') return 'Nouveau record de charge.';
+    if(keep[0]==='volume') return 'Nouveau record de volume.';
+    if(keep[0]==='performance estimée') return 'Meilleure performance estimée.';
+    return 'Nouveau record de reps.';
+  }
+  return `Nouveau record : ${keep.join(' + ')}.`;
 }
 
 // ============================
@@ -1995,11 +2100,45 @@ function getLast(vid, fallbackLoad){
   return raw;
 }
 function setLast(vid, obj){ jset(LAST_KEY(vid), obj); }
-function getState(vid){ return jget(STATE_KEY(vid), {failStreak:0}); }
+function getState(vid){ return jget(STATE_KEY(vid), {failStreak:0,lastValidLoad:null}); }
 function setState(vid, s){ jset(STATE_KEY(vid), s); }
 function clampInt(x,a,b){ x=Math.round(x); return Math.max(a,Math.min(b,x)); }
 
-function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday){
+function getSetRepsArray(sid, sets){
+  const out=[];
+  for(let i=1;i<=sets;i++){
+    const v=toNum(document.getElementById(`setreps_${sid}_${i}`)?.value);
+    if(Number.isFinite(v) && v>0) out.push(v);
+  }
+  return out;
+}
+function analyzeSetDistribution(setReps){
+  const arr=(setReps||[]).map(Number).filter(v=>Number.isFinite(v) && v>0);
+  if(arr.length<2) return {status:'unknown',dropPct:0,excessive:false,message:null};
+  const best=Math.max(...arr);
+  const last=arr[arr.length-1];
+  const dropPct=best>0 ? (best-last)/best : 0;
+  if(dropPct<=0.20) return {status:'stable',dropPct,excessive:false,message:'Séries stables.'};
+  if(dropPct<=0.35) return {status:'normal',dropPct,excessive:false,message:'Fatigue normale en fin d’exercice.'};
+  return {status:'excessive',dropPct,excessive:true,message:'Grosse chute sur les dernières séries : récupération à surveiller.'};
+}
+function calcDeloadLoad(currentLoad, state){
+  const valid=Number.isFinite(state?.lastValidLoad) && state.lastValidLoad>0 ? state.lastValidLoad : null;
+  const base=Number.isFinite(currentLoad) && currentLoad>0 ? currentLoad : valid;
+  if(valid && (!base || valid<base)) return roundSmart(valid);
+  return Number.isFinite(base) ? roundSmart(base*0.95) : base;
+}
+function applyProgressFailure(state, reason){
+  state.failStreak=(state.failStreak||0)+1;
+  state.lastFailureReason=reason||'progress';
+}
+function applyProgressSuccess(state, performedLoad){
+  state.failStreak=0;
+  if(Number.isFinite(performedLoad) && performedLoad>0) state.lastValidLoad=performedLoad;
+  state.lastFailureReason=null;
+}
+
+function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday, setAnalysis=null){
   const sets=slotDef.sets;
   const lo=slotDef.lo, hi=slotDef.hi;
   const rir=effToRir(eff);
@@ -2016,13 +2155,32 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday){
   const inRange = actualTotalReps >= loTot && actualTotalReps <= hiTot;
   const hitTop  = actualTotalReps >= hiTot;
   const belowMin = actualTotalReps < loTot;
+  const belowTarget = actualTotalReps < (sets*targetRPS);
   const okRir = rir >= 2;
   const hard = eff==='HARD';
+  const excessiveDrop = !!setAnalysis?.excessive;
 
   let action='MAINTIEN';
   let nextLoad=baseLoad;
   let nextRPS=targetRPS;
   let why=[];
+
+  function addSetSignal(){
+    if(setAnalysis?.message) why.push(setAnalysis.message);
+  }
+  function maybePlateau(){
+    if((st.failStreak||0) < 3) return false;
+    const deload=calcDeloadLoad(baseLoad, st);
+    action='DÉCHARGE';
+    nextLoad=Number.isFinite(deload) ? deload : baseLoad;
+    nextRPS=lo;
+    st.failStreak=0;
+    why=[];
+    why.push('Plateau détecté : légère baisse de charge pour repartir proprement.');
+    addSetSignal();
+    setState(variant.vid, st);
+    return true;
+  }
 
   if(slotDef.note){
     action='MAINTIEN';
@@ -2033,29 +2191,38 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday){
   if(belowMin){
     action='REMONTÉE';
     nextRPS = lo;
-    st.failStreak = (st.failStreak||0)+1;
+    applyProgressFailure(st, 'below_min');
+    if(maybePlateau()) return {action,nextLoad,nextRPS,why};
     why.push(`Sous le minimum (${actualTotalReps} < ${loTot}).`);
     why.push('On garde la charge et on remonte les reps.');
+    addSetSignal();
     setState(variant.vid, st);
     return {action,nextLoad,nextRPS,why};
   }
 
   if(hard){
     action='MAINTIEN';
-    st.failStreak = (st.failStreak||0)+1;
+    applyProgressFailure(st, excessiveDrop ? 'hard_drop' : 'hard');
+    if(maybePlateau()) return {action,nextLoad,nextRPS,why};
     if(st.failStreak>=2 && targetRPS>lo){
       action='AJUSTEMENT';
       nextRPS = targetRPS-1;
       why.push('Effort: Dur (RIR bas).');
-      why.push('Deux séances difficiles: on baisse légèrement la cible reps.');
+      why.push(excessiveDrop ? 'On ajuste prudemment la cible reps.' : 'Deux séances difficiles: on baisse légèrement la cible reps.');
     } else {
-      why.push('Effort: Dur → on ne force pas la progression.');
+      why.push(excessiveDrop ? 'Effort Dur + fatigue élevée : on reste prudent.' : 'Effort: Dur → on ne force pas la progression.');
     }
+    addSetSignal();
     setState(variant.vid, st);
     return {action,nextLoad,nextRPS,why};
   }
 
-  st.failStreak = 0;
+  if(belowTarget && targetRPS>lo){
+    applyProgressFailure(st, 'below_target');
+    if(maybePlateau()) return {action,nextLoad,nextRPS,why};
+  } else {
+    applyProgressSuccess(st, baseLoad);
+  }
 
   if(hitTop && okRir){
     action='CHARGE +';
@@ -2073,21 +2240,24 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday){
     why.push(`Haut de fourchette atteint (${actualTotalReps} ≥ ${hiTot}).`);
     why.push('Effort OK → micro-charge.');
     why.push(`Ensuite on repart sur ${lo} reps/série.`);
+    addSetSignal();
     setState(variant.vid, st);
     return {action,nextLoad,nextRPS,why};
   }
 
-  if(inRange && targetRPS < hi){
+  if(inRange && targetRPS < hi && !belowTarget){
     action='REPS +';
     nextRPS = clampInt(targetRPS+1, lo, hi);
     why.push(`Dans la fourchette (${loTot}–${hiTot}).`);
     why.push('Effort OK → +1 rep par série la prochaine fois.');
+    addSetSignal();
     setState(variant.vid, st);
     return {action,nextLoad,nextRPS,why};
   }
 
   action='MAINTIEN';
-  why.push('Continuité > performance ponctuelle.');
+  why.push(belowTarget ? 'Cible pas encore solide : on consolide.' : 'Continuité > performance ponctuelle.');
+  addSetSignal();
   setState(variant.vid, st);
   return {action,nextLoad,nextRPS,why};
 }
@@ -2404,6 +2574,16 @@ function openSession(L){
       const l=document.getElementById('load_'+it.sid);
       if(r && it.repsTot!=null) r.value=it.repsTot;
       if(l && it.load!=null) l.value=it.load;
+      const sd = PROGRAM[L].slots.find(x=>x.sid===it.sid);
+      if(sd && Array.isArray(it.setReps) && it.setReps.length){
+        for(let i=1;i<=sd.sets;i++){
+          const inp=document.getElementById(`setreps_${it.sid}_${i}`);
+          if(inp) inp.value = Number.isFinite(it.setReps[i-1]) ? String(it.setReps[i-1]) : '';
+        }
+        syncSetRepsTotal(it.sid, sd.sets);
+      } else if(sd && it.repsTot!=null) {
+        spreadTotalRepsToSets(it.sid, sd.sets, it.repsTot);
+      }
       if(it.eff) setEff(it.sid, it.eff);
     }
   }
@@ -2597,8 +2777,9 @@ function exoCard(L, slotDef){
   const unit = v.unit || 'kg';
 
   const performedLoad = Number.isFinite(last.performedLoad) ? last.performedLoad : slotDef.baseLoad;
-  const initLoad = suggestedStartLoad(slotDef, v, targetRPS);
-  const planLoad = Number.isFinite(last.nextLoad) ? last.nextLoad : initLoad;
+  const initInfo = suggestedStartLoadInfo(slotDef, v, targetRPS);
+  const planLoad = Number.isFinite(last.nextLoad) ? last.nextLoad : initInfo.load;
+  const loadHint = (!last.performedTs && !Number.isFinite(last.nextLoad) && initInfo.source==='nearby') ? 'Charge estimée depuis une variante proche.' : '';
 
   const lastLine = last.performedTs
     ? (unit==='reps'
@@ -2641,6 +2822,7 @@ function exoCard(L, slotDef){
     ${unit==='reps' ? `` : `
     <label>Charge utilisée aujourd’hui (${unit})
       <input id="load_${slotDef.sid}" type="number" value="${planLoad}" inputmode="decimal"/>
+      ${loadHint ? `<div class="small loadHint">${escapeHtml(loadHint)}</div>` : ``}
     </label>`}
 
     <label>Reps par série (${slotDef.sets} séries)</label>
@@ -2678,7 +2860,15 @@ function renderSession(L, opts={}){
       if(repsEl && Number.isFinite(it.repsTot)) repsEl.value = String(it.repsTot);
       if(loadEl && Number.isFinite(it.load)) loadEl.value = String(it.load);
       const sd = PROGRAM[L].slots.find(x=>x.sid===it.sid);
-      if(sd && Number.isFinite(it.repsTot)) spreadTotalRepsToSets(it.sid, sd.sets, it.repsTot);
+      if(sd && Array.isArray(it.setReps) && it.setReps.length){
+        for(let i=1;i<=sd.sets;i++){
+          const inp=document.getElementById(`setreps_${it.sid}_${i}`);
+          if(inp) inp.value = Number.isFinite(it.setReps[i-1]) ? String(it.setReps[i-1]) : '';
+        }
+        syncSetRepsTotal(it.sid, sd.sets);
+      } else if(sd && Number.isFinite(it.repsTot)) {
+        spreadTotalRepsToSets(it.sid, sd.sets, it.repsTot);
+      }
     }
   }
 
@@ -2824,13 +3014,18 @@ function validate(L, sid){
   if(!Number.isFinite(totalReps) || totalReps<=0){ if(res) res.textContent='Entre tes reps, puis valide.'; return false; }
   if(unit!=='reps' && (!Number.isFinite(load))){ if(res) res.textContent='Charge invalide.'; return false; }
 
-  const rx=decideNext(slotDef, v, totalReps, eff, load);
+  const setReps=getSetRepsArray(sid, slotDef.sets);
+  const setAnalysis=analyzeSetDistribution(setReps);
+  const rx=decideNext(slotDef, v, totalReps, eff, load, setAnalysis);
+  const recMsg=recordMessage(updatePersonalRecords(v, totalReps, load));
 
   setLast(v.vid, {
     performedTs: Date.now(),
     performedLoad: load,
     performedTotalReps: totalReps,
     performedEff: eff,
+    performedSetReps: setReps,
+    setDropStatus: setAnalysis.status,
     nextLoad: rx.nextLoad,
     nextRepsPerSet: rx.nextRPS,
   });
@@ -2843,10 +3038,12 @@ function validate(L, sid){
 
   if(whyBox){
     whyBox.style.display='block';
-    whyBox.innerHTML = `<b>Pourquoi</b><br>${rx.why.map(x=>'• '+escapeHtml(x)).join('<br>')}`;
+    const lines = rx.why.slice();
+    if(recMsg) lines.push(recMsg);
+    whyBox.innerHTML = `<b>Pourquoi</b><br>${lines.map(x=>'• '+escapeHtml(x)).join('<br>')}`;
   }
 
-  toast('OK. Décision cohérente et expliquée.');
+  toast(recMsg || 'OK. Décision cohérente et expliquée.');
   // ✅ sauvegarde brouillon séance
   try{ saveDraft(L, buildSessionSnapshot(L)); }catch{}
   if(focusOn) renderFocus();
@@ -3179,6 +3376,8 @@ function buildSessionSnapshot(L){
     const unit=v.unit||'kg';
     const load = (unit==='reps') ? 0 : toNum(document.getElementById('load_'+sd.sid)?.value);
     const reps=toNum(document.getElementById('reps_'+sd.sid)?.value);
+    const setReps=getSetRepsArray(sd.sid, sd.sets);
+    const setAnalysis=analyzeSetDistribution(setReps);
     const eff=getEff(sd.sid);
     const did=Number.isFinite(reps)&&reps>0;
     items.push({
@@ -3186,6 +3385,9 @@ function buildSessionSnapshot(L){
       sets:sd.sets,lo:sd.lo,hi:sd.hi,rest:sd.rest,unit,
       load:Number.isFinite(load)?load:null,
       repsTot:did?reps:null,
+      setReps:did?setReps:[],
+      setDropStatus:did?setAnalysis.status:null,
+      setDropPct:did?setAnalysis.dropPct:null,
       eff:(did && !sd.note)?eff:null,
       note:!!sd.note
     });
@@ -3227,6 +3429,41 @@ function computeVolume(items){
       if(!m||!w) continue;
       out[m]=(out[m]||0)+sets*w;
     }
+  }
+  return out;
+}
+function localFatigueLabel(score){
+  if(score>=18) return 'Très chargé';
+  if(score>=12) return 'Chargé';
+  return 'OK';
+}
+function localFatigueClass(label){
+  if(label==='Très chargé') return 'hot';
+  if(label==='Chargé') return 'warn';
+  return '';
+}
+function computeLocalFatigue(items){
+  const out={};
+  for(const it of (items||[])){
+    const sets=Number.isFinite(it?.sets) ? it.sets : 0;
+    if(!sets || it?.repsTot==null || it?.note) continue;
+    const hard=it.eff==='HARD' ? 1 : 0;
+    const excessive=(it.setDropStatus==='excessive') || analyzeSetDistribution(it.setReps||[]).excessive;
+    const dist=muscleWeightsForItem(it);
+    for(const [m,w] of dist){
+      if(!m||!w) continue;
+      if(!out[m]) out[m]={sets:0,hardSets:0,dropSets:0,score:0,label:'OK'};
+      out[m].sets += sets*w;
+      out[m].hardSets += sets*w*hard;
+      out[m].dropSets += sets*w*(excessive?1:0);
+    }
+  }
+  for(const m of Object.keys(out)){
+    const x=out[m];
+    const hardPct=x.sets ? x.hardSets/x.sets : 0;
+    const dropPct=x.sets ? x.dropSets/x.sets : 0;
+    x.score=x.sets + (hardPct*6) + (dropPct*5);
+    x.label=localFatigueLabel(x.score);
   }
   return out;
 }
@@ -3298,17 +3535,22 @@ function renderStats(){
   document.getElementById('weekRange').textContent = `${fmtDate(ws)} → ${fmtDate(we)}`;
 
   const weekly={};
+  const weeklyItems=[];
   for(const e of log){
     if(e.ts<ws.getTime()||e.ts>we.getTime()) continue;
     for(const [k,v] of Object.entries(e.vol||{})) weekly[k]=(weekly[k]||0)+v;
+    weeklyItems.push(...(e.items||[]));
   }
+  const localFatigue=computeLocalFatigue(weeklyItems);
 
   const musclesList=[M.CHEST,M.BACK,M.BICEPS,M.TRICEPS,M.SHO,M.QUADS,M.HAMS,M.CALVES];
   const max=Math.max(1,...musclesList.map(m=>weekly[m]||0));
 
   document.getElementById('weekVol').innerHTML = `<table>${musclesList.map(m=>{
     const v=weekly[m]||0; const pct=Math.round((v/max)*100);
-    return `<tr><th>${m}</th><td style="width:90px"><b>${seriesFmt(v)}</b> séries</td><td><div class="bar"><i style="width:${pct}%"></i></div></td></tr>`;
+    const label=localFatigue[m]?.label || 'OK';
+    const cls=localFatigueClass(label);
+    return `<tr><th>${m}</th><td style="width:90px"><b>${seriesFmt(v)}</b> séries</td><td><div class="bar"><i style="width:${pct}%"></i></div></td><td style="width:112px"><span class="fatigueBadge ${cls}">${label}</span></td></tr>`;
   }).join('')}</table>`;
 
   // ✅ Résumé visuel (4 semaines glissantes)

@@ -2083,6 +2083,7 @@ function getLast(vid, fallbackLoad){
       performedTs: raw.ts||null,
       nextLoad: load,
       nextRepsPerSet: nextRPS,
+      nextAdvice: null,
     };
   }
 
@@ -2094,9 +2095,13 @@ function getLast(vid, fallbackLoad){
       performedTs: null,
       nextLoad: null,
       nextRepsPerSet: null,
+      nextAdvice: null,
     };
   }
 
+  if(raw && typeof raw==='object' && !('nextAdvice' in raw)){
+    raw.nextAdvice = null;
+  }
   return raw;
 }
 function setLast(vid, obj){ jset(LAST_KEY(vid), obj); }
@@ -2787,6 +2792,14 @@ function exoCard(L, slotDef){
         : `Dernière : ${last.performedTotalReps??'—'} reps · ${performedLoad} ${unit} · ${effLabel(last.performedEff||'OK')}`)
     : 'Dernière : —';
 
+  const nextAdvice = Array.isArray(last.nextAdvice)
+    ? last.nextAdvice.filter(Boolean)
+    : (last.nextAdvice ? [last.nextAdvice] : []);
+  const nextAdviceBox = nextAdvice.length ? `
+    <div class="why" style="display:block">
+      <b>À appliquer aujourd’hui</b><br>${nextAdvice.map(x=>'• '+escapeHtml(x)).join('<br>')}
+    </div>` : '';
+
   const goal = (unit==='reps')
     ? `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi}`
     : `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi} • ${planLoad} ${unit}`;
@@ -2818,6 +2831,7 @@ function exoCard(L, slotDef){
     </div>
 
     <div class="goal">Objectif aujourd’hui • ${goal}</div>
+    ${nextAdviceBox}
 
     ${unit==='reps' ? `` : `
     <label>Charge utilisée aujourd’hui (${unit})
@@ -2948,9 +2962,11 @@ function renderLastSession(L){
           ? `${it.repsTot} reps`
           : `${it.repsTot} reps · ${it.load??'—'} ${it.unit||'kg'} · ${it.eff?effLabel(it.eff):''}`)
       : (it.note ? '<span class="muted">Rappel</span>' : '<span class="muted">non renseigné</span>');
+    const advice = Array.isArray(it.nextAdvice) ? it.nextAdvice.filter(Boolean) : [];
+    const adviceHtml = advice.length ? `<div class="small" style="margin-top:6px;color:rgba(255,213,106,.92)"><b>À reprendre :</b> ${advice.map(escapeHtml).join(' · ')}</div>` : '';
     return `<tr>
       <td style="width:40%">${escapeHtml(it.name)}<div class="small muted">${escapeHtml(it.muscle||'')}</div></td>
-      <td>${right}</td>
+      <td>${right}${adviceHtml}</td>
     </tr>`;
   }).join('');
 
@@ -3028,6 +3044,8 @@ function validate(L, sid){
     setDropStatus: setAnalysis.status,
     nextLoad: rx.nextLoad,
     nextRepsPerSet: rx.nextRPS,
+    nextAction: rx.action,
+    nextAdvice: rx.why.slice(),
   });
   exoValidated[sid] = {reps: totalReps, load: load};
 
@@ -3374,6 +3392,7 @@ function buildSessionSnapshot(L){
     const vid=getVariantForSlot(sd.sid,sd.defaultVid);
     const v=variantMeta(sd,vid);
     const unit=v.unit||'kg';
+    const last=getLast(v.vid, sd.baseLoad);
     const load = (unit==='reps') ? 0 : toNum(document.getElementById('load_'+sd.sid)?.value);
     const reps=toNum(document.getElementById('reps_'+sd.sid)?.value);
     const setReps=getSetRepsArray(sd.sid, sd.sets);
@@ -3389,6 +3408,8 @@ function buildSessionSnapshot(L){
       setDropStatus:did?setAnalysis.status:null,
       setDropPct:did?setAnalysis.dropPct:null,
       eff:(did && !sd.note)?eff:null,
+      nextAction:did && last?.nextAction ? last.nextAction : null,
+      nextAdvice:did && Array.isArray(last?.nextAdvice) ? last.nextAdvice.filter(Boolean) : [],
       note:!!sd.note
     });
   }

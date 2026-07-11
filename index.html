@@ -862,9 +862,145 @@ label{
   100%{ transform:translateX(55%); }
 }
 
+
+
+/* ============================
+   Aura Farm V3 — Golden Reflections
+   Effets de reflets premium sur les éléments dorés
+   ============================ */
+:root{
+  --v3-goldBright:#ffe9a6;
+  --v3-goldHot:#ffd56a;
+  --v3-goldDeep:#9f7928;
+}
+
+.v3Logo,
+.v3Tab.on,
+.session-letter,
+.session-title-word,
+.goal,
+.asBadge,
+.swapBadge,
+.boxI,
+.rtSetBtn,
+.bar > i,
+.fatigueBadge.warn,
+.sbtn.on,
+.pick .opt .swapTag,
+th{
+  position:relative;
+}
+
+.v3Logo,
+.v3Tab.on,
+.rtSetBtn{
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.75) 0%, rgba(255,255,255,0) 18%),
+    linear-gradient(140deg, var(--v3-goldBright) 0%, var(--v3-goldHot) 24%, var(--v3-gold) 46%, var(--v3-goldDeep) 76%, var(--v3-goldHot) 100%) !important;
+  background-size:100% 100%, 180% 180% !important;
+  animation:goldBreath 5.8s ease-in-out infinite;
+}
+
+.v3Logo::after,
+.v3Tab.on::before,
+.card.active-session::after,
+.goal::after,
+.asBadge::after,
+.swapBadge::after,
+.boxI::after,
+.rtSetBtn:not(.done)::after{
+  content:'';
+  position:absolute;
+  inset:-45% -75%;
+  pointer-events:none;
+  background:linear-gradient(115deg, transparent 38%, rgba(255,255,255,.72) 48%, rgba(255,255,255,.22) 54%, transparent 64%);
+  transform:translateX(-72%) rotate(2deg);
+  animation:goldSweep 4.8s cubic-bezier(.2,.65,.22,1) infinite;
+  opacity:.55;
+  mix-blend-mode:screen;
+}
+
+.v3Logo,
+.v3Tab.on,
+.swapBadge,
+.boxI,
+.asBadge{
+  overflow:hidden;
+  isolation:isolate;
+}
+
+.session-letter,
+.session-title-word,
+th,
+.rtT,
+.res{
+  background:linear-gradient(100deg, var(--v3-goldBright) 0%, var(--v3-goldHot) 22%, var(--v3-gold) 45%, var(--v3-goldBright) 58%, var(--v3-gold) 78%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent !important;
+  animation:goldTextFlow 7s ease-in-out infinite;
+  text-shadow:0 0 18px rgba(255,213,106,.18);
+}
+
+.panel, .exo, .card, .box, .focusBox, .rt{
+  border-color:rgba(255,213,106,.14) !important;
+}
+
+.panel::after, .exo::after, .card::after{
+  pointer-events:none;
+}
+
+#homeCards .card::before,
+.exo::before,
+.panel::before{
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.10) 0%, transparent 24%),
+    radial-gradient(900px 360px at 15% 0%, rgba(255,255,255,.06), transparent 55%),
+    radial-gradient(700px 320px at 85% 10%, rgba(255,213,106,.08), transparent 60%) !important;
+}
+
+#homeCards .card:hover{
+  border-color:rgba(255,213,106,.28) !important;
+}
+
+.btn:not(.ghost):hover,
+.sbtn.on,
+.swapFilter.on{
+  border-color:rgba(255,213,106,.48) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.12) inset,
+    0 0 0 1px rgba(255,213,106,.10),
+    0 18px 55px rgba(0,0,0,.48),
+    0 0 34px rgba(212,175,55,.12) !important;
+}
+
+.bar > i{
+  background:linear-gradient(90deg, var(--v3-goldDeep), var(--v3-goldHot), var(--v3-goldBright), var(--v3-gold)) !important;
+  background-size:220% 100% !important;
+  animation:goldTextFlow 4.8s ease-in-out infinite;
+  box-shadow:0 0 20px rgba(255,213,106,.25);
+}
+
+@keyframes goldSweep{
+  0%{ transform:translateX(-72%) rotate(2deg); opacity:0; }
+  18%{ opacity:.62; }
+  42%{ transform:translateX(72%) rotate(2deg); opacity:0; }
+  100%{ transform:translateX(72%) rotate(2deg); opacity:0; }
+}
+@keyframes goldBreath{
+  0%,100%{ background-position:0 0, 0% 50%; filter:saturate(1) brightness(1); }
+  50%{ background-position:0 0, 100% 50%; filter:saturate(1.12) brightness(1.06); }
+}
+@keyframes goldTextFlow{
+  0%,100%{ background-position:0% 50%; }
+  50%{ background-position:100% 50%; }
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce){
-  .v3Tab.on::after{ animation:none !important; }
+  .v3Tab.on::after, .v3Logo::after, .v3Tab.on::before, .card.active-session::after, .goal::after, .asBadge::after, .swapBadge::after, .boxI::after, .rtSetBtn:not(.done)::after{ animation:none !important; }
+  .v3Logo, .v3Tab.on, .rtSetBtn, .session-letter, .session-title-word, th, .rtT, .res, .bar > i{ animation:none !important; }
   .card:hover{ transform:none !important; }
 }
 

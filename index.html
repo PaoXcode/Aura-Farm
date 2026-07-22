@@ -1004,6 +1004,58 @@ th,
   .card:hover{ transform:none !important; }
 }
 
+
+/* ============================
+   Réglages — confort, batterie, thème
+   ============================ */
+.v3TopRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.settingsFab{width:44px;height:44px;border-radius:14px;padding:0;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.settingsPanel{display:grid;gap:12px;margin-top:14px}
+.settingCard{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:18px;padding:14px}
+.settingTop{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.settingTitle{font-weight:950;font-size:15px}
+.settingDesc{margin-top:4px;color:var(--v3-muted);font-size:13px;line-height:1.35}
+.iosSwitch{position:relative;width:54px;height:32px;flex:0 0 auto}
+.iosSwitch input{position:absolute;opacity:0;pointer-events:none}
+.iosSwitch span{position:absolute;inset:0;border-radius:999px;background:rgba(120,120,128,.32);transition:background .18s ease}
+.iosSwitch span::before{content:'';position:absolute;width:28px;height:28px;left:2px;top:2px;border-radius:50%;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.28);transition:transform .18s ease}
+.iosSwitch input:checked + span{background:#34c759}
+.iosSwitch input:checked + span::before{transform:translateX(22px)}
+.themeChoice{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.themeBtn{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--v3-text);border-radius:14px;padding:10px;font-weight:900;cursor:pointer}
+.themeBtn.on{background:rgba(10,132,255,.18);border-color:rgba(10,132,255,.50);color:#eaf4ff}
+.settingsMeta{font-size:12px;color:var(--v3-muted2);margin-top:10px}
+
+body[data-motion=off] *,
+body[data-motion=off] *::before,
+body[data-motion=off] *::after{
+  animation:none !important;
+  transition:none !important;
+  scroll-behavior:auto !important;
+}
+body[data-motion=off] .card:hover{transform:none !important}
+body[data-motion=off] .toast,
+body[data-motion=off] .overlay,
+body[data-motion=off] .focus,
+body[data-motion=off] .top{backdrop-filter:none !important}
+
+body[data-theme=light]{
+  --bg:#f5f5f7;--t:#1d1d1f;--m:rgba(29,29,31,.68);--sh:rgba(0,0,0,.12);
+  --v3-bg:#f5f5f7;--v3-text:#1d1d1f;--v3-muted:rgba(29,29,31,.68);--v3-muted2:rgba(29,29,31,.50);--v3-card:rgba(255,255,255,.72);
+}
+body[data-theme=light]{background:radial-gradient(1000px 560px at 18% -10%,rgba(255,213,106,.28),transparent 60%),radial-gradient(900px 520px at 90% 0%,rgba(10,132,255,.14),transparent 56%),var(--v3-bg) !important}
+body[data-theme=light]::before{opacity:.45;filter:none;background:radial-gradient(1200px 700px at 15% -10%, rgba(255,213,106,.24), transparent 62%),radial-gradient(1000px 650px at 95% 5%, rgba(10,132,255,.12), transparent 58%)}
+body[data-theme=light]::after{opacity:.12;background:radial-gradient(900px 700px at 50% 10%, transparent 40%, rgba(255,255,255,.70) 100%)}
+body[data-theme=light] .v3Top{background:linear-gradient(180deg,rgba(245,245,247,.92),rgba(245,245,247,.72)) !important}
+body[data-theme=light] .panel,body[data-theme=light] .exo,body[data-theme=light] .card,body[data-theme=light] .box,body[data-theme=light] .focusBox{background:linear-gradient(180deg,rgba(255,255,255,.76),rgba(255,255,255,.52)) !important;border-color:rgba(0,0,0,.08) !important;color:var(--v3-text)}
+body[data-theme=light] .v3Nav{background:rgba(255,255,255,.62);border-color:rgba(0,0,0,.08)}
+body[data-theme=light] .btn,body[data-theme=light] .themeBtn{background:rgba(255,255,255,.60) !important;border-color:rgba(0,0,0,.10) !important;color:var(--v3-text) !important}
+body[data-theme=light] input{background:rgba(255,255,255,.75) !important;color:var(--v3-text) !important}
+body[data-theme=light] .toast,body[data-theme=light] .rt{background:rgba(255,255,255,.76) !important;color:var(--v3-text) !important;border-color:rgba(0,0,0,.10) !important}
+body[data-theme=light] .v3Tab{color:rgba(29,29,31,.72) !important}
+body[data-theme=light] .v3Tab.on{color:#1d1d1f !important}
+@media (max-width:520px){.themeChoice{grid-template-columns:1fr}.v3TopRow{align-items:flex-start}.settingsFab{margin-top:2px}}
+
 /* Mobile tweaks */
 @media (max-width:420px){
   .v3Title{ font-size:26px !important; }
@@ -1018,12 +1070,15 @@ th,
 <div class="wrap">
   <header class="top v3Top">
   <div class="v3Header">
-    <div class="v3Brand">
-      <div class="v3Logo">P</div>
-      <div>
-        <div class="v3Title">Aura Farm</div>
-        <div class="v3Sub">S’entraîner avec méthode. Progresser avec certitude.</div>
+    <div class="v3TopRow">
+      <div class="v3Brand">
+        <div class="v3Logo">P</div>
+        <div>
+          <div class="v3Title">Aura Farm</div>
+          <div class="v3Sub">S’entraîner avec méthode. Progresser avec certitude.</div>
+        </div>
       </div>
+      <button class="btn ghost settingsFab" type="button" id="settingsBtn" aria-label="Ouvrir les réglages">⚙️</button>
     </div>
 
     <div class="v3Nav" role="navigation" aria-label="Navigation">
@@ -1130,6 +1185,49 @@ th,
       <div class="small" style="margin-top:6px;color:rgba(255,255,255,.72)">Astuce : importe un export CSV Aura Farm pour restaurer l’historique après une mise à jour.</div>
     </div>
   </section>
+</div>
+
+<!-- Settings overlay -->
+<div class="overlay" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="box">
+    <div class="boxH">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="boxI">⚙️</div>
+        <div>
+          <div class="boxT" id="settingsTitle">Réglages</div>
+          <div class="small">Confort visuel, autonomie et préférences.</div>
+        </div>
+      </div>
+      <button class="btn ghost" type="button" onclick="closeSettings()">Fermer</button>
+    </div>
+    <div class="settingsPanel">
+      <div class="settingCard">
+        <div class="settingTop">
+          <div>
+            <div class="settingTitle">Animations premium</div>
+            <div class="settingDesc">Désactive les reflets, pulsations et transitions pour économiser la batterie et gagner en fluidité.</div>
+          </div>
+          <label class="iosSwitch" aria-label="Activer les animations">
+            <input id="motionSwitch" type="checkbox" onchange="setMotionPreference(this.checked)">
+            <span></span>
+          </label>
+        </div>
+        <div class="settingsMeta" id="motionMeta">—</div>
+      </div>
+      <div class="settingCard">
+        <div class="settingTitle">Apparence</div>
+        <div class="settingDesc">Choisis un thème façon iOS. “Auto” suit le réglage clair/sombre du téléphone.</div>
+        <div class="themeChoice" role="group" aria-label="Choix du thème">
+          <button class="themeBtn" type="button" data-theme-choice="system" onclick="setThemePreference('system')">Auto</button>
+          <button class="themeBtn" type="button" data-theme-choice="dark" onclick="setThemePreference('dark')">Sombre</button>
+          <button class="themeBtn" type="button" data-theme-choice="light" onclick="setThemePreference('light')">Clair</button>
+        </div>
+      </div>
+    </div>
+    <div class="boxA">
+      <button class="btn" type="button" onclick="closeSettings()">OK</button>
+    </div>
+  </div>
 </div>
 
 <!-- Focus mode -->
@@ -1278,6 +1376,36 @@ th,
 
 <script>
 'use strict';
+
+
+// ============================
+// Preferences UI
+// ============================
+const PREF_KEY='aura_farm_prefs_v1';
+const DEFAULT_PREFS={motion:true,theme:'system'};
+function getPrefs(){ return {...DEFAULT_PREFS, ...jget(PREF_KEY,{})}; }
+function setPrefs(next){ jset(PREF_KEY,{...getPrefs(),...next}); applyPrefs(); }
+function resolveTheme(theme){
+  if(theme==='light' || theme==='dark') return theme;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+function applyPrefs(){
+  const prefs=getPrefs();
+  document.body.dataset.motion = prefs.motion ? 'on' : 'off';
+  document.body.dataset.theme = resolveTheme(prefs.theme);
+  const motionSwitch=document.getElementById('motionSwitch');
+  if(motionSwitch) motionSwitch.checked = !!prefs.motion;
+  const motionMeta=document.getElementById('motionMeta');
+  if(motionMeta) motionMeta.textContent = prefs.motion ? 'Animations activées : expérience visuelle complète.' : 'Mode économie actif : animations coupées.';
+  document.querySelectorAll('[data-theme-choice]').forEach(btn=>btn.classList.toggle('on', btn.dataset.themeChoice===prefs.theme));
+}
+function openSettings(){ applyPrefs(); document.getElementById('settings')?.classList.add('on'); }
+function closeSettings(){ document.getElementById('settings')?.classList.remove('on'); }
+function setMotionPreference(enabled){ setPrefs({motion:!!enabled}); toast(enabled?'Animations activées.':'Animations désactivées pour économiser la batterie.'); }
+function setThemePreference(theme){ setPrefs({theme}); toast(theme==='system'?'Thème automatique activé.':theme==='light'?'Mode clair activé.':'Mode sombre activé.'); }
+if(window.matchMedia){
+  try{ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyPrefs); }catch{}
+}
 
 // ============================
 // Programme
@@ -4337,6 +4465,8 @@ function closeOnb(){ document.getElementById('onb').classList.remove('on'); loca
 
 // Boot
 document.addEventListener('DOMContentLoaded',()=>{
+  applyPrefs();
+  document.getElementById('settingsBtn')?.addEventListener('click',openSettings);
   document.getElementById('statsBtn').addEventListener('click',openStats);
   document.getElementById('goalsBtn').addEventListener('click',openGoals);
   document.getElementById('sessionsBtn').addEventListener('click',goHome);

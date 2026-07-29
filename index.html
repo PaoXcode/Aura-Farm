@@ -1038,6 +1038,17 @@ body[data-motion=off] .toast,
 body[data-motion=off] .overlay,
 body[data-motion=off] .focus,
 body[data-motion=off] .top{backdrop-filter:none !important}
+/* Les reflets sont des calques d'animation : sans mouvement, on les retire au
+   lieu de laisser leur bande lumineuse figée au milieu des composants. */
+body[data-motion=off] .v3Tab.on::after,
+body[data-motion=off] .v3Logo::after,
+body[data-motion=off] .v3Tab.on::before,
+body[data-motion=off] .card.active-session::after,
+body[data-motion=off] .goal::after,
+body[data-motion=off] .asBadge::after,
+body[data-motion=off] .swapBadge::after,
+body[data-motion=off] .boxI::after,
+body[data-motion=off] .rtSetBtn:not(.done)::after{display:none !important}
 
 body[data-theme=light]{
   --bg:#f5f5f7;--t:#1d1d1f;--m:rgba(29,29,31,.68);--sh:rgba(0,0,0,.12);
@@ -1054,7 +1065,30 @@ body[data-theme=light] input{background:rgba(255,255,255,.75) !important;color:v
 body[data-theme=light] .toast,body[data-theme=light] .rt{background:rgba(255,255,255,.76) !important;color:var(--v3-text) !important;border-color:rgba(0,0,0,.10) !important}
 body[data-theme=light] .v3Tab{color:rgba(29,29,31,.72) !important}
 body[data-theme=light] .v3Tab.on{color:#1d1d1f !important}
+/* Contraste du thème clair : le doré reste la couleur d'accent, tandis que les
+   textes auparavant codés en blanc retrouvent une encre sombre lisible. */
+body[data-theme=light] .why,
+body[data-theme=light] .boxP,
+body[data-theme=light] .fatigueBadge,
+body[data-theme=light] .pick .opt small,
+body[data-theme=light] .swapCount,
+body[data-theme=light] .rtS,
+body[data-theme=light] .rtHint,
+body[data-theme=light] .ringsHint,
+body[data-theme=light] .ringSub{color:rgba(29,29,31,.72) !important}
+body[data-theme=light] .rtSetBtn.done{color:rgba(29,29,31,.78) !important}
+body[data-theme=light] .fatigueBadge.hot{color:#9f2424 !important}
+
+/* Le minuteur garde son z-index global. La feuille de réglages peut cependant
+   défiler au-dessus de sa zone afin que chaque choix reste atteignable. */
+#settings{align-items:flex-start;overflow-y:auto;overscroll-behavior:contain}
+#settings .box{margin:auto 0;max-height:calc(100dvh - 28px);overflow-y:auto}
+body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
 @media (max-width:520px){.themeChoice{grid-template-columns:1fr}.v3TopRow{align-items:flex-start}.settingsFab{margin-top:2px}}
+@media (max-width:520px){
+  #settings .themeChoice{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #settings .box{margin:0;max-height:none}
+}
 
 /* Mobile tweaks */
 @media (max-width:420px){

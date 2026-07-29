@@ -25,6 +25,20 @@
     .btn:active{transform:translateY(1px) scale(.99)}
     .btn.ghost{background:rgba(255,255,255,.04);box-shadow:none}
     .grid{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+    .programBar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,213,106,.14)}
+    .programTrigger{box-shadow:none;padding:8px 11px;font-size:12px}
+    .programChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+    .programChoice{position:relative;width:100%;min-height:150px;text-align:left;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025);color:var(--t);cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .12s ease}
+    .programChoice:hover{transform:translateY(-1px);border-color:rgba(255,213,106,.42)}
+    .programChoice.on{border-color:rgba(255,213,106,.68);background:linear-gradient(180deg,rgba(212,175,55,.13),rgba(212,175,55,.05));box-shadow:0 0 0 1px rgba(255,213,106,.08)}
+    .programCheck{position:absolute;right:14px;top:14px;color:var(--g2);font-weight:950}
+    .programName{font-size:17px;font-weight:950;padding-right:26px}
+    .programFreq{margin-top:5px;color:rgba(255,213,106,.92);font-size:12px;font-weight:900}
+    .programDesc{margin-top:12px;color:var(--m);font-size:13px;line-height:1.42}
+    .hybridContext{margin-top:7px;color:rgba(255,213,106,.86);font-size:12px}
+    .hybridExerciseNote{margin-top:10px;padding:9px 11px;border-radius:12px;border:1px solid rgba(255,213,106,.16);background:rgba(212,175,55,.055);color:var(--m);font-size:12px;line-height:1.35}
+    @media(max-width:620px){.programChoices{grid-template-columns:1fr}.programChoice{min-height:0}}
+
     .card{width:100%;text-align:left;padding:14px;border-radius:18px;border:1px solid var(--b);background:linear-gradient(180deg,rgba(17,17,17,.92),rgba(10,10,10,.95));box-shadow:0 18px 36px rgba(0,0,0,.78);cursor:pointer;transition:transform .14s ease,box-shadow .18s ease,border-color .18s ease}
     .card:hover{transform:translateY(-2px);border-color:rgba(255,213,106,.42);box-shadow:0 24px 60px rgba(0,0,0,.78)}
     .k{font-size:16px;font-weight:950;display:flex;align-items:center;gap:10px}
@@ -1128,6 +1142,10 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
     <div class="panel" style="margin-bottom:14px">
       <div style="font-weight:950;font-size:16px">Semaine en cours</div>
       <div class="small" style="margin-top:6px">Pendant la séance : tu ne saisis que <b>reps</b> + <b>effort</b> (et la charge). L’appli te dit quoi faire et pourquoi.</div>
+      <div class="programBar">
+        <div><div class="small">Ton organisation</div><div class="small muted" id="programHomeDescription"></div></div>
+        <button class="btn ghost programTrigger" id="programTrigger" type="button" onclick="openProgramPicker()">Programme : Musculation</button>
+      </div>
     </div>
     <div class="grid" id="homeCards"></div>
   </section>
@@ -1138,6 +1156,7 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
       <div>
         <h1 id="sessTitle" style="font-size:18px;font-weight:950;margin:0"><span class="session-title-word">Séance</span></h1>
         <div class="small" id="sessMeta" style="margin-top:4px">—</div>
+        <div class="hybridContext" id="hybridSessionContext" style="display:none">Programme Hybride : adapte l’ordre de tes séances selon tes sorties course.</div>
       </div>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Menu</button>
@@ -1219,6 +1238,29 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
       <div class="small" style="margin-top:6px;color:rgba(255,255,255,.72)">Astuce : importe un export CSV Aura Farm pour restaurer l’historique après une mise à jour.</div>
     </div>
   </section>
+</div>
+
+<!-- Program picker -->
+<div class="overlay" id="programPicker" role="dialog" aria-modal="true" aria-labelledby="programPickerTitle">
+  <div class="box">
+    <div class="boxH"><div><div class="boxT" id="programPickerTitle">Choisir un programme</div><div class="small">Ton historique et tes réglages restent intacts.</div></div><button class="btn ghost" type="button" onclick="closeProgramPicker()">Fermer</button></div>
+    <div class="programChoices">
+      <button class="programChoice" id="programChoiceStrength" type="button" onclick="requestProgramChange('strength')"><span class="programCheck"></span><div class="programName">Musculation</div><div class="programFreq">4 séances par semaine</div><div class="programDesc">Programme complet avec une séance jambes dédiée.</div></button>
+      <button class="programChoice" id="programChoiceHybrid" type="button" onclick="requestProgramChange('hybrid')"><span class="programCheck"></span><div class="programName">Hybride</div><div class="programFreq">3 séances par semaine</div><div class="programDesc">Pensé pour progresser en musculation tout en pratiquant la course à pied. Le travail des jambes est réparti sur les trois séances pour mieux gérer la récupération.<br><br>Idéal si la course fait partie de ta semaine.</div></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="programConfirm" role="dialog" aria-modal="true" aria-labelledby="programConfirmTitle">
+  <div class="box">
+    <div class="boxH"><div><div class="boxT" id="programConfirmTitle">—</div></div></div>
+    <div class="boxP" id="programConfirmText">—</div>
+    <div class="boxA"><button class="btn ghost" type="button" onclick="closeProgramConfirm()">Annuler</button><button class="btn" id="programConfirmGo" type="button" onclick="confirmProgramChange()">Confirmer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="programBlocked" role="dialog" aria-modal="true" aria-labelledby="programBlockedTitle">
+  <div class="box"><div class="boxT" id="programBlockedTitle">Séance en cours</div><div class="boxP">Termine ou quitte ta séance avant de changer de programme.</div><div class="boxA"><button class="btn" type="button" onclick="closeProgramBlocked()">Compris</button></div></div>
 </div>
 
 <!-- Settings overlay -->
@@ -1582,7 +1624,7 @@ const CATALOG={
   ],
 };
 
-const PROGRAM={
+const PROGRAM_STRENGTH={
   A:{title:'Séance A',sub:'Pecs · Triceps · Épaules',slots:[
     {sid:'A1',slot:'decline',muscle:M.CHEST,sets:4,lo:6,hi:10,rest:'2–3 min',baseLoad:60,defaultVid:'decline_machine'},
     {sid:'A2',slot:'incline',muscle:M.CHEST,sets:3,lo:8,hi:12,rest:'2 min',baseLoad:22,defaultVid:'incline_db'},
@@ -1615,6 +1657,29 @@ const PROGRAM={
     {sid:'D5',slot:'calves',muscle:M.CALVES,sets:3,lo:12,hi:20,rest:'1–1.5 min',baseLoad:80,defaultVid:'calf_press'},
   ]},
 };
+
+const cloneSession=(session, overrides={})=>({...session,...overrides,slots:[...session.slots.map(slot=>({...slot})),...(overrides.extraSlots||[])]});
+const PROGRAM_HYBRID={
+  A:cloneSession(PROGRAM_STRENGTH.A,{sub:'Pecs · Triceps · Épaules · Ischios',extraSlots:[
+    {sid:'HA6',slot:'leg_curl',muscle:M.HAMS,sets:4,lo:10,hi:15,rest:'1.5–2 min',baseLoad:35,defaultVid:'leg_curl_seated',hybridLeg:true}
+  ]}),
+  B:cloneSession(PROGRAM_STRENGTH.B,{sub:'Dos · Biceps · Quadriceps',extraSlots:[
+    {sid:'HB6',slot:'leg_press',muscle:M.QUADS,sets:4,lo:8,hi:12,rest:'2–3 min',baseLoad:140,defaultVid:'leg_press',hybridLeg:true}
+  ]}),
+  C:cloneSession(PROGRAM_STRENGTH.C,{sub:'Haut · Biceps · Triceps · Mollets',extraSlots:[
+    {sid:'HC8',slot:'calves',muscle:M.CALVES,sets:4,lo:12,hi:20,rest:'1–1.5 min',baseLoad:80,defaultVid:'calf_press',hybridLeg:true}
+  ]})
+};
+Object.values(PROGRAM_HYBRID).forEach(session=>delete session.extraSlots);
+const PROGRAMS={strength:PROGRAM_STRENGTH,hybrid:PROGRAM_HYBRID};
+const PROGRAM_MODE_KEY='aurafarm_program_mode_v1';
+const PROGRAM_META={
+  strength:{name:'Musculation',home:'4 séances par semaine, avec une séance jambes complète.',weekly:4},
+  hybrid:{name:'Hybride',home:'3 séances par semaine pour progresser en musculation tout en pratiquant la course à pied.',weekly:3}
+};
+function getProgramMode(){ return localStorage.getItem(PROGRAM_MODE_KEY)==='hybrid'?'hybrid':'strength'; }
+function getActiveProgram(){ return PROGRAMS[getProgramMode()] || PROGRAM_STRENGTH; }
+function programLabel(mode){ return PROGRAM_META[mode==='hybrid'?'hybrid':'strength'].name; }
 
 // ============================
 // Storage
@@ -2296,7 +2361,7 @@ function rtClose(){
 
 function getSlotDefBySid(sid){
   if(!current?.L) return null;
-  const S=PROGRAM[current.L];
+  const S=getActiveProgram()[current.L];
   return S?.slots?.find(x=>x.sid===sid) || null;
 }
 function startRestForSid(sid){
@@ -2642,8 +2707,8 @@ function confirmLeaveSession(nextL){
   // si on clique la même séance, pas d’alerte
   if(curL===nextL) return true;
 
-  const cur = PROGRAM[curL]?.title || 'Séance en cours';
-  const nxt = PROGRAM[nextL]?.title || 'nouvelle séance';
+  const cur = getActiveProgram()[curL]?.title || 'Séance en cours';
+  const nxt = getActiveProgram()[nextL]?.title || 'nouvelle séance';
   return confirm(`Tu as une séance en cours : "${cur}".
 
 Pour l’enregistrer dans l’historique, il faut appuyer sur “Terminer • Enregistrer”.
@@ -2665,8 +2730,8 @@ function openLeaveSess(nextL){
 
   _leaveNextL = nextL;
 
-  const cur = PROGRAM[curL]?.title || curL;
-  const nxt = PROGRAM[nextL]?.title || nextL;
+  const cur = getActiveProgram()[curL]?.title || curL;
+  const nxt = getActiveProgram()[nextL]?.title || nextL;
 
   const s=document.getElementById('leaveS');
   const b=document.getElementById('leaveB');
@@ -2690,6 +2755,52 @@ function confirmLeaveSessGo(){
   if(nextL) openSession(nextL);
 }
 
+
+// ============================
+// Program selection
+// ============================
+let pendingProgramMode=null;
+function syncProgramUI(){
+  const mode=getProgramMode();
+  const meta=PROGRAM_META[mode];
+  const trigger=document.getElementById('programTrigger');
+  const desc=document.getElementById('programHomeDescription');
+  if(trigger) trigger.textContent=`Programme : ${meta.name}`;
+  if(desc) desc.textContent=meta.home;
+  for(const key of ['strength','hybrid']){
+    const card=document.getElementById(`programChoice${key==='strength'?'Strength':'Hybrid'}`);
+    card?.classList.toggle('on',key===mode);
+    const check=card?.querySelector('.programCheck');
+    if(check) check.textContent=key===mode?'✓':'';
+    card?.setAttribute('aria-pressed',key===mode?'true':'false');
+  }
+}
+function openProgramPicker(){ syncProgramUI(); document.getElementById('programPicker')?.classList.add('on'); }
+function closeProgramPicker(){ document.getElementById('programPicker')?.classList.remove('on'); }
+function closeProgramConfirm(){ document.getElementById('programConfirm')?.classList.remove('on'); pendingProgramMode=null; }
+function closeProgramBlocked(){ document.getElementById('programBlocked')?.classList.remove('on'); }
+function requestProgramChange(mode){
+  if(!PROGRAMS[mode] || mode===getProgramMode()){ closeProgramPicker(); return; }
+  if(current?.L || getActiveSess()){ closeProgramPicker(); document.getElementById('programBlocked')?.classList.add('on'); return; }
+  pendingProgramMode=mode;
+  const hybrid=mode==='hybrid';
+  document.getElementById('programConfirmTitle').textContent=hybrid?'Passer au programme Hybride ?':'Revenir au programme Musculation ?';
+  document.getElementById('programConfirmText').textContent=hybrid
+    ?'Tu conserveras tout ton historique. L’accueil affichera désormais 3 séances et le travail des jambes sera réparti entre A, B et C.'
+    :'Tu conserveras tout ton historique. L’accueil affichera de nouveau les 4 séances, dont la séance jambes D.';
+  document.getElementById('programConfirmGo').textContent=hybrid?'Passer en Hybride':'Passer en Musculation';
+  closeProgramPicker();
+  document.getElementById('programConfirm')?.classList.add('on');
+}
+function confirmProgramChange(){
+  if(!pendingProgramMode || !PROGRAMS[pendingProgramMode]) return;
+  if(current?.L || getActiveSess()){ closeProgramConfirm(); document.getElementById('programBlocked')?.classList.add('on'); return; }
+  localStorage.setItem(PROGRAM_MODE_KEY,pendingProgramMode);
+  closeProgramConfirm();
+  syncProgramUI();
+  renderHome();
+  toast(`Programme ${programLabel(getProgramMode())} activé.`);
+}
 
 // ============================
 // Views
@@ -2860,24 +2971,26 @@ function goHome(){
   syncInSessionHints(); current=null; toggleFocus(false); closeSwap(); show('home'); renderHome(); }
 function openSession(L){
   syncInSessionHints();
+  const S=getActiveProgram()[L];
+  if(!S){ goHome(); return; }
   setActiveSess(L);
   resetExerciseProgressState();
   current={L};
-  const S=PROGRAM[L];
   document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span><span class="session-letter">${L}</span>`;
   document.getElementById('btnDone').onclick=()=>openDone();
   document.getElementById('focusBtn').onclick=()=>{ focusSeance=true; focusPickSid=null; focusPendingSet=null; toggleFocus(true); };
   document.getElementById('sessMeta').textContent = `${S.sub} ~50 min`;
+  document.getElementById('hybridSessionContext').style.display=getProgramMode()==='hybrid'?'block':'none';
   renderSession(L);
   // ✅ restauration brouillon si existant
   const d=loadDraft();
-  if(d && Array.isArray(d.items) && (!d.letter || d.letter===L)){
+  if(d && Array.isArray(d.items) && (!d.programMode || d.programMode===getProgramMode()) && (!d.letter || d.letter===L)){
     for(const it of d.items){
       const r=document.getElementById('reps_'+it.sid);
       const l=document.getElementById('load_'+it.sid);
       if(r && it.repsTot!=null) r.value=it.repsTot;
       if(l && it.load!=null) l.value=it.load;
-      const sd = PROGRAM[L].slots.find(x=>x.sid===it.sid);
+      const sd = getActiveProgram()[L].slots.find(x=>x.sid===it.sid);
       if(sd && Array.isArray(it.setReps) && it.setReps.length){
         for(let i=1;i<=sd.sets;i++){
           const inp=document.getElementById(`setreps_${it.sid}_${i}`);
@@ -2902,10 +3015,12 @@ function openGoals(){
 }
 
 function renderHome(){
+  syncProgramUI();
   const host=document.getElementById('homeCards');
   host.innerHTML='';
-  ['A','B','C','D'].forEach(L=>{
-    const S=PROGRAM[L];
+  const program=getActiveProgram();
+  Object.keys(program).forEach(L=>{
+    const S=program[L];
     const t=estimateSessionMinutes(L);
     const b=document.createElement('button');
         b.className='card'; b.type='button'; b.onclick=()=>openLeaveSess(L);
@@ -2990,7 +3105,7 @@ function renderSwapOptions(){
 }
 function openSwap(sid){
   if(!current?.L) return;
-  const S=PROGRAM[current.L];
+  const S=getActiveProgram()[current.L];
   const sd=S.slots.find(x=>x.sid===sid);
   if(!sd) return;
   const list=(CATALOG[sd.slot]||[]);
@@ -3129,6 +3244,7 @@ function exoCard(L, slotDef){
     </div>
 
     <div class="goal">Objectif aujourd’hui • ${goal}</div>
+    ${slotDef.hybridLeg?'<div class="hybridExerciseNote">Évite si possible de placer cette séance juste avant une sortie course intense.</div>':''}
     ${nextAdviceBox}
 
     ${unit==='reps' ? `` : `
@@ -3157,7 +3273,7 @@ function exoCard(L, slotDef){
 }
 
 function renderSession(L, opts={}){
-  const S=PROGRAM[L];
+  const S=getActiveProgram()[L];
   const keepInputs = !!opts.keepInputs;
   const prev = keepInputs ? buildSessionSnapshot(L) : null;
 
@@ -3171,7 +3287,7 @@ function renderSession(L, opts={}){
       const loadEl = document.getElementById('load_'+it.sid);
       if(repsEl && Number.isFinite(it.repsTot)) repsEl.value = String(it.repsTot);
       if(loadEl && Number.isFinite(it.load)) loadEl.value = String(it.load);
-      const sd = PROGRAM[L].slots.find(x=>x.sid===it.sid);
+      const sd = getActiveProgram()[L].slots.find(x=>x.sid===it.sid);
       if(sd && Array.isArray(it.setReps) && it.setReps.length){
         for(let i=1;i<=sd.sets;i++){
           const inp=document.getElementById(`setreps_${it.sid}_${i}`);
@@ -3284,7 +3400,7 @@ function renderLastSession(L){
 // Validate
 // ============================
 function validate(L, sid){
-  const S=PROGRAM[L];
+  const S=getActiveProgram()[L];
   const slotDef=S.slots.find(x=>x.sid===sid);
   if(!slotDef) return false;
 
@@ -3389,7 +3505,7 @@ function toggleFocus(on){
 
 function renderFocus(opts={}){
   if(!current?.L) return;
-  const S=PROGRAM[current.L];
+  const S=getActiveProgram()[current.L];
 
   const actives = S.slots.filter(x=>!x.note);
   const totalAct = actives.length || 1;
@@ -3684,7 +3800,7 @@ function fmtDate(d){
   return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
 }
 function buildSessionSnapshot(L){
-  const S=PROGRAM[L];
+  const S=getActiveProgram()[L];
   const items=[];
   for(const sd of S.slots){
     const vid=getVariantForSlot(sd.sid,sd.defaultVid);
@@ -3877,7 +3993,9 @@ function renderStats(){
 
   // Rythme = séances terminées (objectif 12 sur 4 semaines = 3 / semaine)
   const sessions4 = log.filter(e=>e.ts>=winStart).length;
-  const pRhythm = Math.min(1, sessions4/12);
+  const rhythmTarget=12; // objectif historique conservé; Hybride = 3/semaine
+  const rhythmWeekly=3;
+  const pRhythm = Math.min(1, sessions4/rhythmTarget);
 
   // Intensité = pondération des efforts (par séries)
   let setsEasy4=0, setsOK4=0, setsHard4=0;
@@ -3900,13 +4018,13 @@ function renderStats(){
   const pInt = clamp01(intensityScore4);
 
   document.getElementById('trend').innerHTML = `
-  <div class="rvMeta">Basé sur tes 4 dernières semaines • Objectif rythme : 3 séances / semaine</div>
+  <div class="rvMeta">Basé sur tes 4 dernières semaines • Objectif rythme : ${rhythmWeekly} séances / semaine</div>
 
   <div class="rvGrid2">
     <div class="rvCard2">
       <div class="rvRing">${ringOneSVG(pRhythm,'rgba(255,77,77,.98)')}</div>
       <div class="rvLabel">Rythme</div>
-      <div class="rvSmall">${sessions4} / 12 séances</div>
+      <div class="rvSmall">${sessions4} / ${rhythmTarget} séances</div>
       <div class="rvHint">${appleMsgRhythm(pRhythm, sessions4)}</div>
     </div>
 
@@ -3922,6 +4040,7 @@ function renderStats(){
   // ✅ Historique (inchangé)
   host.innerHTML = log.slice(0,12).map(entry=>{
     const dt=new Date(entry.ts);
+    const modeLabel=programLabel(entry.programMode || 'strength');
     const title = `<span class="session-letter">${entry.letter}</span> • ${dt.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})} ${dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
     const volTxt = Object.entries(entry.vol||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${seriesFmt(v)}`).join(' · ')||'—';
 
@@ -3942,7 +4061,8 @@ function renderStats(){
 
     return `<details style="margin-top:10px">
       <summary>${title} <span class="muted">• ${escapeHtml(volTxt)}</span></summary>
-      <div class="small" style="margin-top:6px">Modifie reps/charge puis “Enregistrer”.</div>
+      <div class="small muted" style="margin-top:6px">${modeLabel}</div>
+      <div class="small" style="margin-top:4px">Modifie reps/charge puis “Enregistrer”.</div>
       <div style="overflow:auto"><table><thead><tr><th>Exercice</th><th>Résultat</th><th>Reps</th><th>Charge</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="row" style="margin-top:10px">
         <button class="btn" type="button" onclick="saveEdit('${entry.id}')">Enregistrer</button>
@@ -4056,8 +4176,8 @@ function normalizeStatus(value){
   return v;
 }
 
-function findSidForName(letter, name){
-  const S=PROGRAM[letter];
+function findSidForName(letter, name, mode=getProgramMode()){
+  const S=(PROGRAMS[mode]||PROGRAM_STRENGTH)[letter];
   if(!S) return null;
   const target=String(name||'').trim().toLowerCase();
   if(!target) return null;
@@ -4090,6 +4210,7 @@ function importData(file){
     const idxDate = map['date'];
     const idxTime = map['heure'];
     const idxLetter = map['séance'] ?? map['seance'];
+    const idxProgram = map['programme'];
     const idxName = map['exercice'];
     const idxMuscle = map['groupe_musculaire'];
     const idxSets = map['séries'] ?? map['series'];
@@ -4126,6 +4247,8 @@ function importData(file){
       const dateStr=row[idxDate];
       const timeStr=row[idxTime];
       const letter=row[idxLetter] || '?';
+      const programCell=idxProgram!=null?String(row[idxProgram]||'').trim().toLowerCase():'';
+      const rowProgramMode=programCell==='hybride'||programCell==='hybrid'?'hybrid':'strength';
       const name=row[idxName] || '';
       const repsTarget=String(row[idxRepsTarget]||'').trim();
       let lo=null, hi=null;
@@ -4142,7 +4265,7 @@ function importData(file){
       const repsVal=toNum(row[idxReps]);
 
       if(isDraft){
-        const sid = (idxSid!=null && row[idxSid]) ? String(row[idxSid]).trim() : findSidForName(letter, name);
+        const sid = (idxSid!=null && row[idxSid]) ? String(row[idxSid]).trim() : findSidForName(letter, name, rowProgramMode);
         if(!sid) continue;
         const item={
           sid:sid,
@@ -4161,7 +4284,7 @@ function importData(file){
         }
         if(eff) setEff(sid, eff);
         const key = letter || '?';
-        if(!draftSessions.has(key)) draftSessions.set(key,{letter:key, items:[]});
+        if(!draftSessions.has(key)) draftSessions.set(key,{letter:key, programMode:rowProgramMode, items:[]});
         draftSessions.get(key).items.push(item);
         importedRows++;
         continue;
@@ -4177,13 +4300,15 @@ function importData(file){
       if(existingKeys.has(key)) continue;
 
       if(!sessions.has(key)){
-        sessions.set(key,{letter, ts:d.getTime(), items:[]});
+        sessions.set(key,{letter, programMode:rowProgramMode, ts:d.getTime(), items:[]});
       }
 
+      const importedSid=(idxSid!=null && row[idxSid])?String(row[idxSid]).trim():findSidForName(letter,name,rowProgramMode);
+      const importedVid=(idxVid!=null && row[idxVid])?String(row[idxVid]).trim():null;
       sessions.get(key).items.push({
-        sid:newId(),
+        sid:importedSid || newId(),
         slot:null,
-        vid:null,
+        vid:importedVid,
         name:name,
         muscle:row[idxMuscle] || '',
         sets:toNum(row[idxSets]) || null,
@@ -4208,7 +4333,7 @@ function importData(file){
     for(const entry of sessions.values()){
       const vol=computeVolume(entry.items);
       const total=Object.values(vol).reduce((a,b)=>a+b,0);
-      merged.push({id:newId(), ts:entry.ts, letter:entry.letter, items:entry.items, vol, total});
+      merged.push({id:newId(), ts:entry.ts, letter:entry.letter, programMode:entry.programMode, items:entry.items, vol, total});
     }
     setLog(merged);
     renderStats();
@@ -4216,8 +4341,9 @@ function importData(file){
       const sortedDraft=[...draftSessions.values()].sort((a,b)=>b.items.length-a.items.length);
       const chosen=sortedDraft[0];
       if(chosen && chosen.letter){
+        localStorage.setItem(PROGRAM_MODE_KEY, chosen.programMode==='hybrid'?'hybrid':'strength');
         setActiveSess(chosen.letter);
-        saveDraft(chosen.letter, chosen.items);
+        saveDraft(chosen.letter, chosen.items, chosen.programMode);
       }
     }
     rebuildDerivedStateFromLog();
@@ -4236,6 +4362,7 @@ function exportFullBackup(){
     version:'v3',
     exportedAt:Date.now(),
     storage:{
+      programMode:getProgramMode(),
       log:localStorage.getItem('paogramme_log_v2'),
       cfg:localStorage.getItem('paogramme_cfg_v2'),
       last:Object.fromEntries(
@@ -4292,6 +4419,7 @@ function restoreFullBackup(file){
     if(!confirm('Cette action remplacera toutes les données existantes.')) return;
     try{
       localStorage.clear();
+      localStorage.setItem(PROGRAM_MODE_KEY, payload.storage.programMode==='hybrid'?'hybrid':'strength');
       if(payload.storage.log != null) localStorage.setItem('paogramme_log_v2', payload.storage.log);
       if(payload.storage.cfg != null) localStorage.setItem('paogramme_cfg_v2', payload.storage.cfg);
       const last=payload.storage.last || {};
@@ -4331,6 +4459,7 @@ function exportData(){
     'Date',
     'Heure',
     'Séance',
+    'Programme',
     'Exercice',
     'Groupe_musculaire',
     'Séries',
@@ -4363,6 +4492,7 @@ function exportData(){
         date,
         heure,
         entry.letter,
+        programLabel(entry.programMode || 'strength'),
         it.name || '',
         it.muscle || '',
         it.sets ?? '',
@@ -4394,6 +4524,7 @@ function exportData(){
         date,
         heure,
         exportLetter,
+        programLabel(draft.programMode || getProgramMode()),
         it.name || '',
         it.muscle || '',
         it.sets ?? '',
@@ -4434,8 +4565,8 @@ function exportData(){
 // ============================
 const DRAFT_KEY='paogramme_session_draft_v1';
 
-function saveDraft(letter, items){
-  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({letter:letter||'', items:items||[]})); }catch{}
+function saveDraft(letter, items, programMode=getProgramMode()){
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[]})); }catch{}
 }
 function loadDraft(){
   try{
@@ -4460,7 +4591,7 @@ function closeDone(){
     if(hasAny){
       const vol=computeVolume(items);
       const total=Object.values(vol).reduce((a,b)=>a+b,0);
-      const entry={id:newId(),ts:Date.now(),letter:L,items,vol,total};
+      const entry={id:newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),items,vol,total};
       clearDraft();
       const log=getLog(); log.push(entry); setLog(log);
     } else {

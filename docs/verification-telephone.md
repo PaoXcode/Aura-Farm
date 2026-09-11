@@ -16,9 +16,9 @@ deux exigés pour le premier retour.
 
 ## Parcours rapide (8 min)
 
-- **Découverte (1 min) :** stockage vierge, avancer/revenir sur les trois étapes,
-  ouvrir le détail des deux programmes, choisir explicitement un programme,
-  saisir un pseudo fictif puis aller à l'accueil.
+- **Découverte (1 min) :** stockage vierge, ouvrir le détail des deux programmes,
+  choisir explicitement un programme puis commencer directement la séance A.
+  Vérifier que le prénom reste facultatif et que la restauration est visible.
 - **Saisie et clavier (2 min) :** ouvrir A en vue guidée ; saisir charge et séries,
   dont une série centrale laissée vide. Vérifier que le clavier ne masque ni le
   champ ni l'action, que le zoom ne se déclenche pas seul et que le passage vers
@@ -52,3 +52,21 @@ Pour chaque anomalie : scénario, résultat observé, résultat attendu, écran,
 appareil et capture/vidéo éventuelle. Employer uniquement **Vérifié**, **Corrigé
 et revérifié**, **Échec restant** ou **Non exécuté** et préciser s'il s'agit d'un
 test de fonction, d'un navigateur émulé ou d'un téléphone réel.
+
+## Essai sans explication préalable
+
+Utiliser un profil isolé et ne donner au participant ni tutoriel ni indication
+gestuelle. Noter mot pour mot ses hésitations ou erreurs pour choisir un
+programme, démarrer, puis retrouver **Entraînement**, **Progrès**, **Réglages**,
+les charges de référence, la sauvegarde et l'aide. Ne rien inventer si aucun
+participant n'est disponible.
+
+Demander ensuite de saisir `11` dans les séries 1 et 2, lancer le repos, toucher
+la série 3 puis corriger la série 1. Mettre l'application en arrière-plan pendant
+le repos et vérifier au retour valeur, focus, série active et message de fin.
+Tester l'écran verrouillé séparément sans présumer que le son fonctionne.
+
+Consigner appareil, OS, navigateur, tailles retournées par `window.innerWidth`
+et `window.innerHeight`, thème, réduction des animations et présence du clavier.
+Une émulation Playwright doit rester libellée comme telle et ne remplace pas cet
+essai physique.

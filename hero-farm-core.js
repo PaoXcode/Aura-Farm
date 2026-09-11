@@ -37,7 +37,8 @@
     return {ok:true,value:n};
   }
   function performedSets(item){
-    if(Array.isArray(item?.setReps)) return item.setReps.filter(x=>validateReps(x,{allowEmpty:false}).ok).length;
+    if(Array.isArray(item?.setReps)&&item.setReps.length) return item.setReps.filter(x=>validateReps(x,{allowEmpty:false}).ok).length;
+    if(Array.isArray(item?.setReps)&&!item.legacyAggregate) return 0;
     return item?.repsTot>0 ? (Number.isInteger(item.performedSets)?item.performedSets:(Number.isInteger(item.sets)?item.sets:0)) : 0;
   }
   function tonnage(item){
@@ -58,11 +59,61 @@
     }
     return {load:null,source:'calibration'};
   }
-  function collect(storage){ const out={}; for(let i=0;i<storage.length;i++){const k=storage.key(i);if(isAllowedKey(k)) out[k]=storage.getItem(k);} return out; }
+  const RECOVERY_KEY='paogramme_recovery_backup_v1';
+  function collect(storage){ const out={}; for(let i=0;i<storage.length;i++){const k=storage.key(i);if(k!==RECOVERY_KEY&&isAllowedKey(k)) out[k]=storage.getItem(k);} return out; }
+  const plainObject=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+  const finiteOrNull=x=>x==null||Number.isFinite(x);
+  function validateItem(item,where){
+    if(!plainObject(item)) throw new Error(`${where} : exercice invalide`);
+    for(const name of ['sid','vid']) if(typeof item[name]!=='string'||!item[name]||!/^[\w.:-]+$/u.test(item[name])) throw new Error(`${where} : ${name} manquant ou dangereux`);
+    if(item.unit!=null&&!['kg','kg par haltère','kg (assistance)','lest (kg)','reps'].includes(item.unit)) throw new Error(`${where} : unité invalide`);
+    for(const name of ['sets','lo','hi']) if(item[name]!=null&&(!Number.isInteger(item[name])||item[name]<0)) throw new Error(`${where} : ${name} invalide`);
+    if(!finiteOrNull(item.load)||item.load<0) throw new Error(`${where} : charge invalide`);
+    if(!finiteOrNull(item.repsTot)||item.repsTot<0||!Number.isInteger(item.repsTot)) throw new Error(`${where} : total de répétitions invalide`);
+    if(item.setReps!=null){
+      if(!Array.isArray(item.setReps)||item.setReps.some(r=>!Number.isInteger(r)||r<=0)) throw new Error(`${where} : séries invalides`);
+      if(item.repsTot!=null&&item.setReps.reduce((a,b)=>a+b,0)!==item.repsTot) throw new Error(`${where} : total incohérent avec les séries`);
+    }
+    if(item.eff!=null&&!['EASY','OK','HARD'].includes(item.eff)) throw new Error(`${where} : effort invalide`);
+  }
+  function validateLog(value){
+    const entries=Array.isArray(value)?value:(plainObject(value)?Object.values(value):null);
+    if(!entries) throw new Error('Journal invalide : une liste de séances est attendue');
+    const ids=new Set();
+    entries.forEach((entry,i)=>{
+      if(!plainObject(entry)||typeof entry.id!=='string'||!entry.id||!/^[\w.:-]+$/u.test(entry.id)||ids.has(entry.id)) throw new Error(`Journal : identifiant de séance invalide à l’index ${i}`);
+      ids.add(entry.id);
+      if(!Number.isFinite(entry.ts)||entry.ts<0) throw new Error(`Journal : date invalide pour ${entry.id}`);
+      if(typeof entry.letter!=='string'||!entry.letter) throw new Error(`Journal : séance invalide pour ${entry.id}`);
+      if(entry.programMode!=null&&!['strength','hybrid'].includes(entry.programMode)) throw new Error(`Journal : programme invalide pour ${entry.id}`);
+      if(!Array.isArray(entry.items)) throw new Error(`Journal : exercices invalides pour ${entry.id}`);
+      entry.items.forEach((item,j)=>validateItem(item,`Journal ${entry.id}, exercice ${j+1}`));
+    });
+  }
+  function validateDraft(value){
+    if(Array.isArray(value)){value.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`));return;}
+    if(!plainObject(value)||!Array.isArray(value.items)) throw new Error('Brouillon invalide');
+    if(value.sessionId!=null&&(typeof value.sessionId!=='string'||!value.sessionId)) throw new Error('Brouillon : identifiant invalide');
+    if(value.letter!=null&&typeof value.letter!=='string') throw new Error('Brouillon : séance invalide');
+    if(value.programMode!=null&&!['strength','hybrid'].includes(value.programMode)) throw new Error('Brouillon : programme invalide');
+    value.items.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`));
+  }
   function validateStoredValue(k,v){
     if(typeof v!=='string') throw new Error(`Valeur invalide pour ${k}`);
     if(k==='aurafarm_program_mode_v1'&&!['strength','hybrid'].includes(v)) throw new Error('Programme invalide');
-    if(/^(paogramme_log_v2|paogramme_cfg_v2|paogramme_session_draft_v1|last_|state_|records_|eff_)/.test(k)) try{JSON.parse(v)}catch{throw new Error(`JSON invalide pour ${k}`)}
+    if(k==='paogramme_active_session_v1'&&!/^[\w.-]*$/u.test(v)) throw new Error('Séance active invalide');
+    if(k==='paogramme_rt_view_v1'&&!['full','compact'].includes(v)) throw new Error('Vue du chronomètre invalide');
+    if(k==='paogramme_rt_sound_v1'&&!['0','1'].includes(v)) throw new Error('Son du chronomètre invalide');
+    if(['onb_done_v5','rebuild_done_v1'].includes(k)&&v!=='1') throw new Error(`Indicateur invalide pour ${k}`);
+    let parsed;
+    if(/^(paogramme_log_v2|paogramme_cfg_v2|paogramme_session_draft_v1|aura_farm_prefs_v1|paogramme_rt_state_v1|last_|state_|records_|eff_|rp10_)/.test(k)) try{parsed=JSON.parse(v)}catch{throw new Error(`JSON invalide pour ${k}`)}
+    if(k==='paogramme_log_v2') validateLog(parsed);
+    else if(k==='paogramme_session_draft_v1') validateDraft(parsed);
+    else if(k==='paogramme_cfg_v2' && (!plainObject(parsed)||Object.values(parsed).some(x=>typeof x!=='string'))) throw new Error('Configuration invalide');
+    else if(k==='aura_farm_prefs_v1' && (!plainObject(parsed)||(parsed.theme!=null&&!['system','light','dark'].includes(parsed.theme))||(parsed.motion!=null&&typeof parsed.motion!=='boolean'))) throw new Error('Préférences invalides');
+    else if(k.startsWith('eff_')&&!['EASY','OK','HARD'].includes(parsed)) throw new Error(`Effort invalide pour ${k}`);
+    else if(k.startsWith('rp10_')&&(!Number.isFinite(parsed)||parsed<=0)) throw new Error(`Référence invalide pour ${k}`);
+    else if(/^(last_|state_|records_)/.test(k)&&!plainObject(parsed)) throw new Error(`État dérivé invalide pour ${k}`);
   }
   function createBackup(storage,now=Date.now()){return {schema:'hero-farm-backup',version:BACKUP_VERSION,exportedAt:now,storage:collect(storage)};}
   function migrateBackup(payload){
@@ -85,21 +136,43 @@
   function validateBackup(payload){
     const p=migrateBackup(payload), keys=Object.keys(p.storage);
     if(!keys.length && p.empty!==true) throw new Error('Sauvegarde vide non explicitement déclarée');
-    for(const k of keys){if(!isAllowedKey(k)) throw new Error(`Clé étrangère refusée : ${k}`);validateStoredValue(k,p.storage[k]);}
+    for(const k of keys){if(k===RECOVERY_KEY||!isAllowedKey(k)) throw new Error(`Clé étrangère refusée : ${k}`);validateStoredValue(k,p.storage[k]);}
     return p;
   }
   function restoreBackup(storage,payload){
-    const p=validateBackup(payload), old=collect(storage), recovery=JSON.stringify(createBackup(storage));
-    storage.setItem('paogramme_recovery_backup_v1',recovery);
+    const p=validateBackup(payload), old=collect(storage), recovery=JSON.stringify({schema:'hero-farm-recovery',version:1,status:'prepared',backup:createBackup(storage)});
+    try{storage.setItem(RECOVERY_KEY,recovery);if(storage.getItem(RECOVERY_KEY)!==recovery)throw Error('Vérification de la copie de récupération impossible');}catch(error){return {ok:false,error,recoveryAvailable:false,restored:false};}
     try{
       for(const k of Object.keys(old)) storage.removeItem(k);
       for(const [k,v] of Object.entries(p.storage)) storage.setItem(k,v);
-      storage.removeItem('paogramme_recovery_backup_v1');
+      for(const [k,v] of Object.entries(p.storage)) if(storage.getItem(k)!==v) throw new Error(`Vérification impossible pour ${k}`);
+      storage.removeItem(RECOVERY_KEY);
       return {ok:true,migratedFrom:p.migratedFrom||null};
     }catch(error){
-      try{for(const k of Object.keys(collect(storage))) storage.removeItem(k);for(const [k,v] of Object.entries(old)) storage.setItem(k,v);}catch{}
-      return {ok:false,error,recovery};
+      let restored=false;
+      try{for(const k of Object.keys(collect(storage))) storage.removeItem(k);for(const [k,v] of Object.entries(old)) storage.setItem(k,v);restored=Object.entries(old).every(([k,v])=>storage.getItem(k)===v);}catch{}
+      return {ok:false,error,recovery,recoveryAvailable:storage.getItem(RECOVERY_KEY)===recovery,restored};
     }
+  }
+  function inspectRecovery(storage){
+    const raw=storage.getItem(RECOVERY_KEY); if(!raw)return null;
+    try{const x=JSON.parse(raw);if(x?.schema!=='hero-farm-recovery'||x.version!==1)return {valid:false,error:'Copie de récupération illisible'};return {valid:true,backup:validateBackup(x.backup),raw};}catch(error){return {valid:false,error:error.message};}
+  }
+  function recoverBackup(storage){
+    const recovery=inspectRecovery(storage);if(!recovery?.valid)return {ok:false,error:new Error(recovery?.error||'Aucune copie de récupération')};
+    const wanted=recovery.backup.storage;
+    try{for(const k of Object.keys(collect(storage)))storage.removeItem(k);for(const [k,v] of Object.entries(wanted))storage.setItem(k,v);if(!Object.entries(wanted).every(([k,v])=>storage.getItem(k)===v))throw Error('Vérification de récupération impossible');storage.removeItem(RECOVERY_KEY);return {ok:true};}catch(error){return {ok:false,error,recoveryAvailable:storage.getItem(RECOVERY_KEY)===recovery.raw};}
+  }
+  function validateSessionItems(items){
+    for(const item of items||[]){const count=performedSets(item);if(!count)continue;const kind=chargeKind(item.unit);if(kind!=='bodyweight'){const check=validateLoad(item.load,kind);if(!check.ok)return {ok:false,sid:item.sid,error:`${item.name||item.sid} : ${check.error}`};}}
+    return {ok:true};
+  }
+  function isCompletedExercise(item){return !!item&&!item.note&&performedSets(item)>0&&((item.legacyAggregate&&Number.isInteger(item.performedSets)&&item.performedSets>=item.sets)||(!item.legacyAggregate&&performedSets(item)>=(item.sets||1)));}
+  function editHistoryItem(item,{repsTot,load,setReps}={}){
+    const next={...item}; if(!Array.isArray(item.setReps))next.legacyAggregate=true;if(load!==undefined)next.load=load;
+    if(setReps!==undefined){next.setReps=setReps.slice();next.repsTot=setReps.reduce((a,b)=>a+b,0)||null;next.legacyAggregate=false;delete next.performedSets;}
+    else if(repsTot!==undefined&&repsTot!==item.repsTot){next.repsTot=repsTot;if(item.legacyAggregate){next.setReps=[];}else if(repsTot==null){next.setReps=[];next.legacyAggregate=false;}else throw Error('Modifie les répétitions série par série pour une séance détaillée.');}
+    return next;
   }
   function commitSession(storage,entry,draftKey='paogramme_session_draft_v1',logKey='paogramme_log_v2'){
     if(!entry||typeof entry.id!=='string'||!entry.id) return {ok:false,error:new Error('Identifiant de séance manquant')};
@@ -110,5 +183,5 @@
   }
   function latestSession(log,letter,programMode){return (log||[]).filter(e=>e?.letter===letter&&(e.programMode||'strength')===programMode).sort((a,b)=>(b.ts||0)-(a.ts||0))[0]||null;}
   function mergeUniqueEntries(existing,incoming){const seen=new Set((existing||[]).map(e=>e?.id).filter(Boolean));return [...(existing||[]),...(incoming||[]).filter(e=>e?.id&&!seen.has(e.id)&&(seen.add(e.id),true))];}
-  return {BACKUP_VERSION,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,commitSession,latestSession,mergeUniqueEntries};
+  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,editHistoryItem,commitSession,latestSession,mergeUniqueEntries};
 });

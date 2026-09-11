@@ -1452,6 +1452,7 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
   </div>
 </div>
 
+<script src="hero-farm-core.js"></script>
 <script>
 'use strict';
 
@@ -1786,11 +1787,7 @@ function findSlotByVid(vid){
   return null;
 }
 function comparableUnit(a,b){
-  const ua=String(a||'kg').toLowerCase();
-  const ub=String(b||'kg').toLowerCase();
-  if(ua==='reps' || ub==='reps') return false;
-  if(ua===ub) return true;
-  return (ua.includes('kg') && ub.includes('kg') && !ua.includes('assistance') && !ub.includes('assistance'));
+  return HFCore.comparableUnit(a,b);
 }
 function recentHistoryForVariant(vid){
   const last=getLast(vid, NaN);
@@ -1807,38 +1804,16 @@ function recentHistoryForVariant(vid){
   return best;
 }
 function findNearbyVariantHistory(slotDef, variant){
-  const unit=variant.unit||'kg';
-  if(unit==='reps') return null;
-  const slots=[slotDef.slot, findSlotByVid(variant.vid)].filter(Boolean);
-  const seen=new Set();
-  const candidates=[];
-  for(const slot of slots){
-    for(const ex of (CATALOG[slot]||[])){
-      if(!ex?.vid || ex.vid===variant.vid || seen.has(ex.vid)) continue;
-      seen.add(ex.vid);
-      if(!comparableUnit(unit, ex.unit||'kg')) continue;
-      const h=recentHistoryForVariant(ex.vid);
-      const recent=h && (!h.ts || (Date.now()-h.ts)<=NEARBY_HISTORY_MAX_AGE_MS);
-      if(recent && Number.isFinite(h.load) && h.load>0) candidates.push({...h, unit:ex.unit||'kg', slot});
-    }
-  }
-  candidates.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  return candidates[0] || null;
+  // Aucun transfert entre variantes sans règle de conversion documentée.
+  return null;
 }
 function suggestedStartLoadInfo(slotDef, variant, targetRPS){
   const unit=(variant.unit||'kg');
   if(unit==='reps') return {load:0, source:'bodyweight'};
 
-  const nearby=findNearbyVariantHistory(slotDef, variant);
-  if(nearby){
-    return {load:roundSmart(nearby.load*0.90), source:'nearby', vid:nearby.vid};
-  }
-
   const rp10 = getRP10(variant.vid);
-  if(Number.isFinite(rp10) && rp10>0){
-    return {load:roundSmart(estimateLoadFromRP10(rp10, targetRPS)), source:'rp10'};
-  }
-  return {load:slotDef.baseLoad, source:'base'};
+  const result=HFCore.suggestedStart({rp10,targetReps:targetRPS});
+  return {...result,load:Number.isFinite(result.load)?roundSmart(result.load):null};
 }
 function suggestedStartLoad(slotDef, variant, targetRPS){
   return suggestedStartLoadInfo(slotDef, variant, targetRPS).load;
@@ -1851,7 +1826,7 @@ function getRecords(vid){ return jget(RECORDS_KEY(vid), {bestLoad:null,bestTotal
 function setRecords(vid, rec){ jset(RECORDS_KEY(vid), rec||{}); }
 function updatePersonalRecords(variant, totalReps, load){
   const unit=variant?.unit||'kg';
-  const weighted=unit!=='reps' && Number.isFinite(load) && load>0;
+  const weighted=!['reps','kg (assistance)'].includes(unit) && Number.isFinite(load) && load>=0;
   const rec=getRecords(variant.vid);
   const hit=[];
   const next={...rec};
@@ -1867,13 +1842,11 @@ function updatePersonalRecords(variant, totalReps, load){
     if(Number.isFinite(volume) && (!Number.isFinite(rec.bestVolume) || volume>rec.bestVolume)){
       next.bestVolume=volume; hit.push('volume');
     }
-    const est=e1RM(load, totalReps);
-    if(Number.isFinite(est) && (!Number.isFinite(rec.bestE1RM) || est>rec.bestE1RM)){
-      next.bestE1RM=est; hit.push('performance estimée');
-    }
+    // E1RM volontairement désactivé : le total d'un exercice n'est pas une série.
+    next.bestE1RM=null;
   }
 
-  if(hit.length) setRecords(variant.vid, next);
+  setRecords(variant.vid, next);
   return hit;
 }
 function recordMessage(hits){
@@ -2540,6 +2513,11 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday, 
   }
   function maybePlateau(){
     if((st.failStreak||0) < 3) return false;
+    if(HFCore.chargeKind(variant.unit)==='assistance'){
+      action='MAINTIEN'; nextLoad=baseLoad; nextRPS=lo; st.failStreak=0; why=[];
+      why.push('Assistance maintenue : aucune règle fiable de récupération assistée n’est définie.');
+      setState(variant.vid, st); return true;
+    }
     const deload=calcDeloadLoad(baseLoad, st);
     action='DÉCHARGE';
     nextLoad=Number.isFinite(deload) ? deload : baseLoad;
@@ -2595,7 +2573,7 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday, 
   }
 
   if(hitTop && okRir){
-    action='CHARGE +';
+    action=HFCore.progressLabel(variant);
     const base=baseLoad;
     let inc = 1;
 
@@ -2605,10 +2583,10 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday, 
       const raw = base*(variant.pct/100);
       inc = Math.max(0.5, Math.round(raw*2)/2);
     }
-    nextLoad = roundSmart(base+inc);
+    nextLoad = HFCore.progressLoad(base, variant);
     nextRPS = lo;
     why.push(`Haut de fourchette atteint (${actualTotalReps} ≥ ${hiTot}).`);
-    why.push('Effort OK → micro-charge.');
+    why.push(HFCore.chargeKind(variant.unit)==='assistance' ? 'Effort OK → assistance réduite, donc effort accru.' : 'Effort OK → micro-charge.');
     why.push(`Ensuite on repart sur ${lo} reps/série.`);
     addSetSignal();
     setState(variant.vid, st);
@@ -2633,39 +2611,18 @@ function decideNext(slotDef, variant, actualTotalReps, eff, performedLoadToday, 
 }
 
 function rebuildDerivedStateFromLog(){
-  const log=getLog();
-  if(!log.length) return;
-  const byVid=new Map();
+  const log=getLog().slice().sort((a,b)=>(a.ts||0)-(b.ts||0)||String(a.id||'').localeCompare(String(b.id||'')));
   const variantByVid=new Map(allVariantsFlat().map(v=>[v.vid, v]));
-
-  for(const entry of log){
-    const items=entry?.items || [];
-    for(const item of items){
-      try{
-        if(!item || item.repsTot == null) continue;
-        if(item.note) continue;
-        if(!item.vid) continue;
-        const prev=byVid.get(item.vid);
-        if(!prev || (entry.ts || 0) > (prev.entry?.ts || 0)){
-          byVid.set(item.vid, {entry, item});
-        }
-      }catch{
-        continue;
-      }
-    }
-  }
-
-  for(const [vid, payload] of byVid.entries()){
+  for(const k of Object.keys(localStorage)) if(/^(last_|state_|records_)/.test(k)) localStorage.removeItem(k);
+  for(const entry of log) for(const item of (entry?.items||[])){
     try{
-      const entry=payload.entry;
-      const item=payload.item;
-      if(!item || !entry) continue;
+      if(!item?.vid || item.note || !Number.isInteger(item.repsTot) || item.repsTot<=0) continue;
       const slotDef={
-        sets:item.sets,
-        lo:item.lo,
-        hi:item.hi,
+        sets:Number.isInteger(item.sets)&&item.sets>0?item.sets:1,
+        lo:Number.isFinite(item.lo)?item.lo:1,
+        hi:Number.isFinite(item.hi)?item.hi:Math.max(1,item.repsTot),
         rest:item.rest,
-        baseLoad:(item.load ?? 0),
+        baseLoad:Number.isFinite(item.load)?item.load:NaN,
         note:false
       };
       const meta=variantByVid.get(item.vid);
@@ -2678,7 +2635,7 @@ function rebuildDerivedStateFromLog(){
       const performedLoad=isReps ? 0 : (item.load ?? 0);
       const nextLoad=isReps ? (Number.isFinite(rx.nextLoad) ? rx.nextLoad : 0) : rx.nextLoad;
 
-      setLast(vid, {
+      setLast(item.vid, {
         performedTs: entry.ts,
         performedLoad: performedLoad,
         performedTotalReps: item.repsTot,
@@ -2686,7 +2643,7 @@ function rebuildDerivedStateFromLog(){
         nextLoad: nextLoad,
         nextRepsPerSet: rx.nextRPS,
       });
-      setState(vid, {failStreak:0});
+      updatePersonalRecords(variant,item.repsTot,item.load);
     }catch{
       continue;
     }
@@ -2833,6 +2790,7 @@ let focusPendingSet = null;
 let exoInitial = {};
 let exoValidated = {};
 let sessionProgressBaselineByVid = {};
+let currentSessionId = null;
 
 function resetExerciseProgressState(){
   exoInitial = {};
@@ -2977,11 +2935,14 @@ function openSession(L){
   if(!S){ goHome(); return; }
   setActiveSess(L);
   resetExerciseProgressState();
+  const existingDraft=loadDraft();
+  currentSessionId=(existingDraft && existingDraft.letter===L && existingDraft.sessionId) || newId();
+  if(existingDraft?.progressBaseline && typeof existingDraft.progressBaseline==='object') sessionProgressBaselineByVid=existingDraft.progressBaseline;
   current={L};
   document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span><span class="session-letter">${L}</span>`;
   document.getElementById('btnDone').onclick=()=>openDone();
   document.getElementById('focusBtn').onclick=()=>{ focusSeance=true; focusPickSid=null; focusPendingSet=null; toggleFocus(true); };
-  document.getElementById('sessMeta').textContent = `${S.sub} ~50 min`;
+  document.getElementById('sessMeta').textContent = `${S.sub} • durée planifiée estimée ~${estimateSessionMinutes(L)} min`;
   document.getElementById('hybridSessionContext').style.display=getProgramMode()==='hybrid'?'block':'none';
   renderSession(L);
   // ✅ restauration brouillon si existant
@@ -3005,6 +2966,7 @@ function openSession(L){
       if(it.eff) setEff(it.sid, it.eff);
     }
   }
+  saveDraft(L,buildSessionSnapshot(L));
   show('sess');
 }
 function openStats(){
@@ -3199,7 +3161,7 @@ function exoCard(L, slotDef){
   const performedLoad = Number.isFinite(last.performedLoad) ? last.performedLoad : slotDef.baseLoad;
   const initInfo = suggestedStartLoadInfo(slotDef, v, targetRPS);
   const planLoad = Number.isFinite(last.nextLoad) ? last.nextLoad : initInfo.load;
-  const loadHint = (!last.performedTs && !Number.isFinite(last.nextLoad) && initInfo.source==='nearby') ? 'Charge estimée depuis une variante proche.' : '';
+  const loadHint = (!last.performedTs && !Number.isFinite(planLoad)) ? 'À calibrer : commence prudemment et renseigne la charge réellement utilisée.' : '';
 
   const lastLine = last.performedTs
     ? (unit==='reps'
@@ -3217,7 +3179,7 @@ function exoCard(L, slotDef){
 
   const goal = (unit==='reps')
     ? `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi}`
-    : `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi} • ${planLoad} ${unit}`;
+    : `${slotDef.sets}×${targetRPS} • Reps ${slotDef.lo}–${slotDef.hi}${Number.isFinite(planLoad)?` • ${planLoad} ${unit}`:' • charge à renseigner'}`;
   const setInputs = Array.from({length:slotDef.sets},(_,i)=>`
     <div class="setCell">
       <b>Série ${i+1}</b>
@@ -3251,7 +3213,7 @@ function exoCard(L, slotDef){
 
     ${unit==='reps' ? `` : `
     <label>Charge utilisée aujourd’hui (${unit})
-      <input id="load_${slotDef.sid}" type="number" value="${planLoad}" inputmode="decimal"/>
+      <input id="load_${slotDef.sid}" type="number" min="0" step="any" value="${Number.isFinite(planLoad)?planLoad:''}" inputmode="decimal"/>
       ${loadHint ? `<div class="small loadHint">${escapeHtml(loadHint)}</div>` : ``}
     </label>`}
 
@@ -3358,7 +3320,7 @@ function renderLastSession(L){
   const host=document.getElementById('lastSessionPanel');
   if(!host) return;
   const log=getLog().slice().sort((a,b)=>b.ts-a.ts);
-  const entry=log.find(e=>e.letter===L);
+  const entry=HFCore.latestSession(log,L,getProgramMode());
   if(!entry){
     host.innerHTML = `
       <div style="font-weight:950">Dernière séance enregistrée</div>
@@ -3414,6 +3376,17 @@ function validate(L, sid){
   const vid=getVariantForSlot(slotDef.sid, slotDef.defaultVid);
   const v=variantMeta(slotDef, vid);
 
+  const res=document.getElementById('res_'+sid);
+  for(let i=1;i<=slotDef.sets;i++){
+    const field=document.getElementById(`setreps_${sid}_${i}`);
+    const check=HFCore.validateReps(field?.value,{allowEmpty:false});
+    if(!check.ok){ if(res) res.textContent=`Série ${i} : ${check.error}`; field?.setAttribute('aria-invalid','true'); return false; }
+    field?.removeAttribute('aria-invalid');
+  }
+  const unit=v.unit||'kg';
+  const loadCheck=unit==='reps'?{ok:true,value:0}:HFCore.validateLoad(document.getElementById('load_'+sid)?.value,HFCore.chargeKind(unit));
+  if(!loadCheck.ok){ if(res) res.textContent=loadCheck.error; document.getElementById('load_'+sid)?.setAttribute('aria-invalid','true'); return false; }
+
   // Une séance = un seul pas d'avancement par exercice.
   // Si on revalide après correction, on recalcule depuis la base du début
   // de séance au lieu d'empiler plusieurs avancées.
@@ -3428,12 +3401,10 @@ function validate(L, sid){
     setState(v.vid, baseline.state);
   }
 
-  const unit=v.unit||'kg';
-  const load = (unit==='reps') ? 0 : toNum(document.getElementById('load_'+sid)?.value);
+  const load = loadCheck.value;
   const totalReps=toNum(document.getElementById('reps_'+sid)?.value);
   const eff = getEff(sid);
 
-  const res=document.getElementById('res_'+sid);
   const whyBox=document.getElementById('why_'+sid);
 
   if(!areExerciseSetsComplete(sid, slotDef.sets)){
@@ -3551,7 +3522,7 @@ function renderFocus(opts={}){
 
   const goalLine = (unit==='reps')
     ? `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi})`
-    : `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi}) · ${planLoad} ${unit}`;
+    : `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi})${Number.isFinite(planLoad)?` · ${planLoad} ${unit}`:' · charge à renseigner'}`;
 
   const firstEmptySet = getFirstEmptySetNumber(next.sid, next.sets);
   const pendingSet = (focusPendingSet?.sid === next.sid && focusPendingSet.set) ? focusPendingSet.set : null;
@@ -3859,7 +3830,7 @@ function muscleWeightsForItem(it){
 function computeVolume(items){
   const out={};
   for(const it of (items||[])){
-    const sets=(it?.sets||0);
+    const sets=HFCore.performedSets(it);
     if(!sets) continue;
     const dist=muscleWeightsForItem(it);
     for(const [m,w] of dist){
@@ -3983,7 +3954,7 @@ function renderStats(){
   const musclesList=[M.CHEST,M.BACK,M.BICEPS,M.TRICEPS,M.SHO,M.QUADS,M.HAMS,M.CALVES];
   const max=Math.max(1,...musclesList.map(m=>weekly[m]||0));
 
-  document.getElementById('weekVol').innerHTML = `<table>${musclesList.map(m=>{
+  document.getElementById('weekVol').innerHTML = `<div class="small muted">Estimations issues des séries réellement renseignées dans le journal, sans portée médicale.</div><table>${musclesList.map(m=>{
     const v=weekly[m]||0; const pct=Math.round((v/max)*100);
     const label=localFatigue[m]?.label || 'OK';
     const cls=localFatigueClass(label);
@@ -4079,22 +4050,25 @@ function saveEdit(entryId){
   const idx=log.findIndex(x=>x.id===entryId);
   if(idx<0) return;
   const entry=log[idx];
-  const items=(entry.items||[]).map(it=>{
-    const r=toNum(document.getElementById(`ed_reps_${entryId}_${it.sid}`)?.value);
-    const l=toNum(document.getElementById(`ed_load_${entryId}_${it.sid}`)?.value);
-    const reps = Number.isFinite(r)&&r>0 ? r : null;
-    const load = Number.isFinite(l) ? l : (it.load??null);
-    return {...it, repsTot: reps, load};
-  });
+  const items=[];
+  for(const it of (entry.items||[])){
+    const repsField=document.getElementById(`ed_reps_${entryId}_${it.sid}`), loadField=document.getElementById(`ed_load_${entryId}_${it.sid}`);
+    const repsCheck=HFCore.validateReps(repsField?.value,{allowEmpty:true});
+    const loadCheck=(it.unit==='reps'||loadField?.value==='')?{ok:true,value:it.unit==='reps'?null:(it.load??null)}:HFCore.validateLoad(loadField.value,HFCore.chargeKind(it.unit));
+    if(!repsCheck.ok||!loadCheck.ok){ toast(repsCheck.error||loadCheck.error); (repsCheck.ok?loadField:repsField)?.setAttribute('aria-invalid','true'); return; }
+    items.push({...it,repsTot:repsCheck.value,load:loadCheck.value,setReps:[],legacyAggregate:repsCheck.value!=null});
+  }
   const vol=computeVolume(items);
   const total=Object.values(vol).reduce((a,b)=>a+b,0);
   log[idx]={...entry, items, vol, total};
   setLog(log);
+  rebuildDerivedStateFromLog();
   toast('Historique mis à jour.');
   renderStats();
 }
 function deleteEntry(entryId){
   setLog(getLog().filter(x=>x.id!==entryId));
+  rebuildDerivedStateFromLog();
   toast('Séance supprimée.');
   renderStats();
 }
@@ -4265,14 +4239,18 @@ function importData(file){
       const eff = effFromLabel(row[idxEff]);
       const note = String(row[idxEff]||'').trim().toLowerCase()==='rappel';
       const repsVal=toNum(row[idxReps]);
+      const repsCheck=HFCore.validateReps(row[idxReps],{allowEmpty:isDraft});
+      const loadCheck=unit==='reps'?{ok:true,value:null}:HFCore.validateLoad(row[idxLoad],HFCore.chargeKind(unit),{allowEmpty:isDraft});
+      if(!repsCheck.ok || !loadCheck.ok) continue;
 
       if(isDraft){
-        const sid = (idxSid!=null && row[idxSid]) ? String(row[idxSid]).trim() : findSidForName(letter, name, rowProgramMode);
+        const rawSid=(idxSid!=null && row[idxSid]) ? String(row[idxSid]).trim() : '';
+        const sid = /^[A-Za-z0-9_-]{1,40}$/.test(rawSid) ? rawSid : findSidForName(letter, name, rowProgramMode);
         if(!sid) continue;
         const item={
           sid:sid,
-          repsTot:Number.isFinite(repsVal)?repsVal:null,
-          load:Number.isFinite(load)?load:null,
+          repsTot:repsCheck.value,
+          load:loadCheck.value,
           eff:eff,
           note:note,
           unit:unit,
@@ -4281,7 +4259,7 @@ function importData(file){
           hi:hi,
           rest:toNum(row[idxRest]) || null
         };
-        if(idxVid!=null && row[idxVid]){
+        if(idxVid!=null && row[idxVid] && allVariantsFlat().some(v=>v.vid===String(row[idxVid]).trim())){
           setVariantForSlot(sid, String(row[idxVid]).trim());
         }
         if(eff) setEff(sid, eff);
@@ -4305,8 +4283,10 @@ function importData(file){
         sessions.set(key,{letter, programMode:rowProgramMode, ts:d.getTime(), items:[]});
       }
 
-      const importedSid=(idxSid!=null && row[idxSid])?String(row[idxSid]).trim():findSidForName(letter,name,rowProgramMode);
-      const importedVid=(idxVid!=null && row[idxVid])?String(row[idxVid]).trim():null;
+      const candidateSid=(idxSid!=null && row[idxSid])?String(row[idxSid]).trim():'';
+      const importedSid=/^[A-Za-z0-9_-]{1,40}$/.test(candidateSid)?candidateSid:findSidForName(letter,name,rowProgramMode);
+      const candidateVid=(idxVid!=null && row[idxVid])?String(row[idxVid]).trim():'';
+      const importedVid=allVariantsFlat().some(v=>v.vid===candidateVid)?candidateVid:null;
       sessions.get(key).items.push({
         sid:importedSid || newId(),
         slot:null,
@@ -4360,30 +4340,7 @@ function importData(file){
 // ✅ Sauvegarde complète JSON
 // ============================
 function exportFullBackup(){
-  const backup={
-    version:'v3',
-    exportedAt:Date.now(),
-    storage:{
-      programMode:getProgramMode(),
-      log:localStorage.getItem('paogramme_log_v2'),
-      cfg:localStorage.getItem('paogramme_cfg_v2'),
-      last:Object.fromEntries(
-        Object.keys(localStorage)
-          .filter(k=>k.startsWith('last_'))
-          .map(k=>[k, localStorage.getItem(k)])
-      ),
-      state:Object.fromEntries(
-        Object.keys(localStorage)
-          .filter(k=>k.startsWith('state_'))
-          .map(k=>[k, localStorage.getItem(k)])
-      ),
-      rp10:Object.fromEntries(
-        Object.keys(localStorage)
-          .filter(k=>k.startsWith('rp10_'))
-          .map(k=>[k, localStorage.getItem(k)])
-      )
-    }
-  };
+  const backup=HFCore.createBackup(localStorage);
   const blob=new Blob([JSON.stringify(backup)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -4414,26 +4371,10 @@ function restoreFullBackup(file){
       toast('Sauvegarde JSON invalide.');
       return;
     }
-    if(!payload || typeof payload!=='object' || !payload.storage){
-      toast('Sauvegarde JSON invalide.');
-      return;
-    }
+    try{ payload=HFCore.validateBackup(payload); }catch(error){ toast(error.message); return; }
     if(!confirm('Cette action remplacera toutes les données existantes.')) return;
-    try{
-      localStorage.clear();
-      localStorage.setItem(PROGRAM_MODE_KEY, payload.storage.programMode==='hybrid'?'hybrid':'strength');
-      if(payload.storage.log != null) localStorage.setItem('paogramme_log_v2', payload.storage.log);
-      if(payload.storage.cfg != null) localStorage.setItem('paogramme_cfg_v2', payload.storage.cfg);
-      const last=payload.storage.last || {};
-      const state=payload.storage.state || {};
-      const rp10=payload.storage.rp10 || {};
-      Object.entries(last).forEach(([k,v])=>{ if(k) localStorage.setItem(k, v); });
-      Object.entries(state).forEach(([k,v])=>{ if(k) localStorage.setItem(k, v); });
-      Object.entries(rp10).forEach(([k,v])=>{ if(k) localStorage.setItem(k, v); });
-    }catch{
-      toast('Sauvegarde JSON invalide.');
-      return;
-    }
+    const result=HFCore.restoreBackup(localStorage,payload);
+    if(!result.ok){ toast('Restauration impossible. Les anciennes données ont été conservées.'); return; }
     location.reload();
   };
   reader.onerror=()=>toast('Lecture de la sauvegarde impossible.');
@@ -4568,7 +4509,7 @@ function exportData(){
 const DRAFT_KEY='paogramme_session_draft_v1';
 
 function saveDraft(letter, items, programMode=getProgramMode()){
-  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[]})); }catch{}
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({sessionId:currentSessionId||newId(),letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[],progressBaseline:sessionProgressBaselineByVid})); }catch{ toast('Brouillon non sauvegardé : stockage indisponible.'); }
 }
 function loadDraft(){
   try{
@@ -4584,23 +4525,35 @@ function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
 // ============================
 // Finish session
 // ============================
-function openDone(){ document.getElementById('done').classList.add('on'); }
-function closeDone(){
-  if(current?.L){
-    const L=current.L;
-    const items=buildSessionSnapshot(L);
-    const hasAny = items.some(it=>it.repsTot!=null);
-    if(hasAny){
-      const vol=computeVolume(items);
-      const total=Object.values(vol).reduce((a,b)=>a+b,0);
-      const entry={id:newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),items,vol,total};
-      clearDraft();
-      const log=getLog(); log.push(entry); setLog(log);
-    } else {
-      toast('Aucune donnée saisie: séance non enregistrée.');
-      clearDraft();
+let finishingSession=false;
+function openDone(){
+  if(finishingSession || !current?.L) return;
+  finishingSession=true;
+  const L=current.L;
+  for(const sd of getActiveProgram()[L].slots){
+    for(let i=1;i<=sd.sets;i++){
+      const field=document.getElementById(`setreps_${sd.sid}_${i}`);
+      if(field?.value!=='' && !HFCore.validateReps(field.value,{allowEmpty:false}).ok){
+        field.setAttribute('aria-invalid','true'); toast(`Série ${i} invalide : corrige-la avant d’enregistrer.`); finishingSession=false; return;
+      }
+    }
+    const loadField=document.getElementById(`load_${sd.sid}`), variant=variantMeta(sd,getVariantForSlot(sd.sid,sd.defaultVid));
+    if(loadField?.value!=='' && !HFCore.validateLoad(loadField.value,HFCore.chargeKind(variant.unit)).ok){
+      loadField.setAttribute('aria-invalid','true'); toast('Charge invalide : corrige-la avant d’enregistrer.'); finishingSession=false; return;
     }
   }
+  const items=buildSessionSnapshot(L);
+  const validItems=items.filter(it=>it.repsTot!=null && it.repsTot>0);
+  if(!validItems.length){ toast('Aucune série réalisée : brouillon conservé.'); finishingSession=false; return; }
+  const vol=computeVolume(items), total=Object.values(vol).reduce((a,b)=>a+b,0);
+  const entry={id:currentSessionId||newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),partial:validItems.length<items.filter(it=>!it.note).length,items,vol,total};
+  const result=HFCore.commitSession(localStorage,entry,DRAFT_KEY,LOG_KEY);
+  finishingSession=false;
+  if(!result.ok){ toast('Échec de l’enregistrement : brouillon conservé.'); return; }
+  rebuildDerivedStateFromLog();
+  document.getElementById('done').classList.add('on');
+}
+function closeDone(){
   document.getElementById('done').classList.remove('on');
   rtState.doneSets = {};
   rtPersist();

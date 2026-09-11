@@ -1090,7 +1090,9 @@ body[data-theme=light] .rtS,
 body[data-theme=light] .rtHint,
 body[data-theme=light] .ringsHint,
 body[data-theme=light] .ringSub{color:rgba(29,29,31,.72) !important}
-body[data-theme=light] .rtSetBtn.done{color:rgba(29,29,31,.78) !important}
+/* Les séries terminées conservent un chiffre blanc sur leur fond doré : le
+   contraste reste ainsi aussi net qu'en thème sombre. */
+body[data-theme=light] .rtSetBtn.done{color:rgba(255,255,255,.95) !important}
 body[data-theme=light] .fatigueBadge.hot{color:#9f2424 !important}
 
 /* Le minuteur garde son z-index global. La feuille de réglages peut cependant

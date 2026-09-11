@@ -172,3 +172,51 @@ test('la restauration réussie et sa validation sont idempotentes',()=>{
   const payload=backup({paogramme_log_v2:JSON.stringify([entry()])});
   for(let i=0;i<2;i++){const s=new MemoryStorage();assert.equal(core.restoreBackup(s,payload).ok,true);assert.deepEqual(core.validateBackup(core.createBackup(s)).storage,payload.storage);}
 });
+
+test('nouveau visiteur conserve son étape puis termine avec un choix explicite',()=>{
+  const s=new MemoryStorage();
+  assert.equal(core.hasPriorUse(s),false);
+  assert.equal(core.saveSetup(s,{step:2,name:'Léa <script>',program:null}).ok,true);
+  assert.equal(JSON.parse(s.getItem('hero_farm_setup_v1')).step,2);
+  assert.equal(core.saveSetup(s,{step:3,name:'Léa',program:null},{complete:true}).ok,false);
+  const done=core.saveSetup(s,{step:3,name:'Léa',program:'hybrid'},{complete:true});
+  assert.equal(done.ok,true);assert.equal(s.getItem('aurafarm_program_mode_v1'),'hybrid');assert.equal(s.getItem('onb_done_v5'),'1');
+});
+
+test('aller à l’accueil termine la configuration sans créer de séance',()=>{
+  const s=new MemoryStorage();assert.equal(core.saveSetup(s,{step:3,name:'',program:'strength'},{complete:true}).ok,true);
+  assert.equal(s.getItem('paogramme_active_session_v1'),null);assert.equal(s.getItem('paogramme_session_draft_v1'),null);
+});
+
+test('anciens indicateurs, historique, séance et brouillon évitent le parcours obligatoire',()=>{
+  for(const initial of [{onb_done_v5:'1'},{paogramme_log_v2:'[{"id":"s"}]'},{paogramme_active_session_v1:'A'},{paogramme_session_draft_v1:'{"items":[]}'}]) assert.equal(core.hasPriorUse(new MemoryStorage(initial)),true);
+  assert.equal(core.hasPriorUse(new MemoryStorage({aura_farm_prefs_v1:'{"theme":"dark"}'})),false);
+});
+
+test('profil versionné normalise le prénom sans interprétation et à trente caractères',()=>{
+  assert.equal(core.normalizeName('  <img onerror=x>  '),'<img onerror=x>');
+  assert.equal(core.normalizeName('é'.repeat(40)).length,30);
+  assert.doesNotThrow(()=>core.validateProfile({version:1,name:'Zoë & Sam'}));
+  assert.throws(()=>core.validateProfile({version:1,name:'x'.repeat(31)}));
+});
+
+test('profil et configuration sont exportés, validés et restaurés',()=>{
+  const source=new MemoryStorage();core.saveSetup(source,{step:3,name:'Noé',program:'strength'},{complete:true});
+  const payload=core.createBackup(source);assert.ok(payload.storage.hero_farm_profile_v1);assert.ok(payload.storage.hero_farm_setup_v1);
+  const target=new MemoryStorage();assert.equal(core.restoreBackup(target,payload).ok,true);assert.equal(JSON.parse(target.getItem('hero_farm_profile_v1')).name,'Noé');
+});
+
+test('une sauvegarde historique sans profil demeure valide et utilisable',()=>{
+  const old=backup({paogramme_log_v2:JSON.stringify([entry()]),aurafarm_program_mode_v1:'strength'});
+  assert.doesNotThrow(()=>core.validateBackup(old));const s=new MemoryStorage();assert.equal(core.restoreBackup(s,old).ok,true);assert.equal(core.hasPriorUse(s),true);
+});
+
+test('panne de stockage pendant la configuration ne produit aucun faux succès',()=>{
+  const s=new MemoryStorage({},1),draft={step:2,name:'Ada',program:'strength'};const result=core.saveSetup(s,draft);
+  assert.equal(result.ok,false);assert.deepEqual(draft,{step:2,name:'Ada',program:'strength'});assert.equal(s.getItem('onb_done_v5'),null);
+});
+
+test('la finalisation répétée ne crée ni historique ni brouillon',()=>{
+  const s=new MemoryStorage();for(let i=0;i<2;i++)assert.equal(core.saveSetup(s,{step:3,name:'A',program:'strength'},{complete:true}).ok,true);
+  assert.equal(s.getItem('paogramme_log_v2'),null);assert.equal(s.getItem('paogramme_session_draft_v1'),null);
+});

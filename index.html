@@ -1106,6 +1106,13 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
   #settings .box{margin:0;max-height:none}
 }
 
+:root{--gold-solid:#d2a62f;--gold-deep:#9a7113;--space-1:8px;--space-2:16px;--space-3:24px;--radius-card:22px}
+.homeHero{display:grid;gap:12px;margin-bottom:14px;padding:clamp(20px,5vw,34px);border-color:rgba(255,213,106,.35)!important}.homeHero h1{margin:0;font-size:clamp(28px,8vw,42px)}
+.eyebrow{color:var(--g2);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}.homePrimary{margin-top:8px;min-height:54px;font-size:16px;background:linear-gradient(135deg,#f3d879,#c49520)!important;color:#17130a!important;border-color:#f3d879!important}.homeSummary{margin-bottom:18px}.sectionTitle{font-size:17px;margin:22px 2px 12px}
+.onboarding{overflow-y:auto;padding:14px}.onbBox{width:min(680px,100%);margin:auto;padding:clamp(22px,6vw,42px);border-color:rgba(255,213,106,.38)}.onbBox h1{font-size:clamp(28px,8vw,44px);margin:10px 0 18px}.onbSteps{display:flex;gap:8px;margin-bottom:18px}.onbSteps span{height:4px;flex:1;border-radius:9px;background:rgba(255,255,255,.12)}.onbSteps span.on{background:linear-gradient(90deg,#f3d879,#b88918)}.onbLead{font-size:20px;font-weight:850;line-height:1.3}.onbCopy{line-height:1.55;color:var(--m);margin:10px 0 22px}.onbField{display:grid;gap:8px;margin-top:22px}.onbPrograms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.onbProgram{padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.03);color:inherit;text-align:left;cursor:pointer}.onbProgram.selected{border:2px solid var(--g2);background:rgba(212,175,55,.10)}.selectedText{font-weight:900;color:var(--g2);min-height:20px}.programDetails{margin-top:10px;color:var(--m);font-size:12px;line-height:1.5}.onbTips{display:grid;gap:12px}.onbTip{padding:14px;border-left:3px solid var(--gold-solid);background:rgba(212,175,55,.07);border-radius:0 14px 14px 0}.onbError{min-height:22px;color:#ff8f8f;margin-top:10px}.onbActions{position:sticky;bottom:0;padding-top:18px;background:linear-gradient(transparent,var(--bg) 20%)}.helpBtn{padding:5px 9px!important;margin-left:7px!important;font-size:12px!important}.helpText{display:none;margin:8px 0;padding:12px;border-radius:12px;background:rgba(212,175,55,.08);color:var(--m)}.helpText.on{display:block}
+body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rgba(255,255,255,.6)}body[data-theme=light] .onbProgram.selected{border-color:#9a7113;background:#fff7dc}body[data-theme=light] .onbSteps span{background:rgba(0,0,0,.12)}body[data-theme=light] .eyebrow,body[data-theme=light] .selectedText{color:#765300}
+@media(max-width:520px){.onbPrograms{grid-template-columns:1fr}.onbActions{display:grid;grid-template-columns:1fr}.onbActions .btn{width:100%;min-height:48px}}
+
 /* Mobile tweaks */
 @media (max-width:420px){
   .v3Title{ font-size:26px !important; }
@@ -1141,14 +1148,15 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
 
   <div id="modePill" style="display:none"></div>
   <section id="vHome">
-    <div class="panel" style="margin-bottom:14px">
-      <div style="font-weight:950;font-size:16px">Semaine en cours</div>
-      <div class="small" style="margin-top:6px">Pendant la séance : tu ne saisis que <b>reps</b> + <b>effort</b> (et la charge). L’appli te dit quoi faire et pourquoi.</div>
-      <div class="programBar">
-        <div><div class="small">Ton organisation</div><div class="small muted" id="programHomeDescription"></div></div>
-        <button class="btn ghost programTrigger" id="programTrigger" type="button" onclick="openProgramPicker()">Programme : Musculation</button>
-      </div>
+    <div class="panel homeHero">
+      <div class="eyebrow" id="homeGreeting">Ton entraînement</div>
+      <h1 id="homeProgram">Musculation</h1>
+      <div class="small muted" id="programHomeDescription"></div>
+      <button class="btn homePrimary" id="homePrimary" type="button">Commencer la séance A</button>
+      <button class="btn ghost" id="programTrigger" type="button" onclick="openProgramPicker()">Changer de programme</button>
     </div>
+    <div class="panel homeSummary" id="homeSummary"></div>
+    <h2 class="sectionTitle">Choisir une séance</h2>
     <div class="grid" id="homeCards"></div>
   </section>
 
@@ -1293,6 +1301,13 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
         <div class="settingsMeta" id="motionMeta">—</div>
       </div>
       <div class="settingCard">
+        <label class="settingTitle" for="profileName">Prénom ou pseudo</label>
+        <div class="settingDesc">Facultatif, 30 caractères maximum.</div>
+        <input id="profileName" maxlength="30" autocomplete="nickname">
+        <button class="btn ghost" type="button" onclick="saveProfileName()">Enregistrer le prénom</button>
+        <button class="btn ghost" type="button" onclick="openGuide()">Revoir le guide</button>
+      </div>
+      <div class="settingCard">
         <div class="settingTitle">Apparence</div>
         <div class="settingDesc">Choisis un thème façon iOS. “Auto” suit le réglage clair/sombre du téléphone.</div>
         <div class="themeChoice" role="group" aria-label="Choix du thème">
@@ -1400,20 +1415,15 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
 </div>
 
 
-<div class="overlay" id="onb">
-  <div class="box">
-    <div class="boxH">
-      <div style="display:flex;gap:12px;align-items:center">
-        <div class="boxI">H</div>
-        <div>
-          <div class="boxT" id="onbT">HERO FARM.</div>
-          <div class="small" id="onbS">1/3</div>
-        </div>
-      </div>
-      <button class="btn ghost" type="button" onclick="skipOnb()">Passer</button>
-    </div>
-    <div class="boxP" id="onbB">Tu t’entraînes. On gère la progression.</div>
-    <div class="boxA">
+<div class="overlay onboarding" id="onb" role="dialog" aria-modal="true" aria-labelledby="onbT">
+  <div class="box onbBox">
+    <div class="onbSteps" aria-label="Progression"><span id="onbDot1"></span><span id="onbDot2"></span><span id="onbDot3"></span></div>
+    <div class="eyebrow" id="onbS">Étape 1 sur 3</div>
+    <h1 class="boxT" id="onbT">HERO FARM</h1>
+    <div id="onbB"></div>
+    <div class="onbError" id="onbError" role="alert"></div>
+    <div class="boxA onbActions">
+      <button class="btn ghost" type="button" id="onbBack" onclick="previousOnb()">Retour</button>
       <button class="btn" type="button" id="onbN" onclick="nextOnb()">Continuer</button>
     </div>
   </div>
@@ -1478,7 +1488,7 @@ function applyPrefs(){
   if(motionMeta) motionMeta.textContent = prefs.motion ? 'Animations activées : expérience visuelle complète.' : 'Mode économie actif : animations coupées.';
   document.querySelectorAll('[data-theme-choice]').forEach(btn=>btn.classList.toggle('on', btn.dataset.themeChoice===prefs.theme));
 }
-function openSettings(){ applyPrefs(); document.getElementById('settings')?.classList.add('on'); }
+function openSettings(){ applyPrefs(); const input=document.getElementById('profileName');if(input)input.value=getProfile().name||'';document.getElementById('settings')?.classList.add('on'); }
 function closeSettings(){ document.getElementById('settings')?.classList.remove('on'); }
 function setMotionPreference(enabled){ setPrefs({motion:!!enabled}); toast(enabled?'Animations activées.':'Animations désactivées pour économiser la batterie.'); }
 function setThemePreference(theme){ setPrefs({theme}); toast(theme==='system'?'Thème automatique activé.':theme==='light'?'Mode clair activé.':'Mode sombre activé.'); }
@@ -2728,7 +2738,7 @@ function syncProgramUI(){
   const meta=PROGRAM_META[mode];
   const trigger=document.getElementById('programTrigger');
   const desc=document.getElementById('programHomeDescription');
-  if(trigger) trigger.textContent=`Programme : ${meta.name}`;
+  if(trigger) trigger.textContent='Changer de programme';
   if(desc) desc.textContent=meta.home;
   for(const key of ['strength','hybrid']){
     const card=document.getElementById(`programChoice${key==='strength'?'Strength':'Hybrid'}`);
@@ -2984,6 +2994,18 @@ function openGoals(){
 
 function renderHome(){
   syncProgramUI();
+  const mode=getProgramMode(),meta=PROGRAM_META[mode],log=getLog().slice().sort((a,b)=>(b.ts||0)-(a.ts||0)),active=getActiveSess(),draft=loadDraft();
+  const resumable=(draft?.programMode&&draft.programMode!==mode)?active:(active||draft?.letter||'');
+  const name=getProfile().name||'';
+  document.getElementById('homeGreeting').textContent=name?`Bonjour ${name}`:'Ton entraînement';
+  document.getElementById('homeProgram').textContent=meta.name;
+  const primary=document.getElementById('homePrimary');
+  if(resumable){primary.textContent=`Reprendre la séance ${resumable}`;primary.onclick=()=>openSession(resumable);}
+  else if(!log.length){primary.textContent='Commencer la séance A';primary.onclick=()=>openSession('A');}
+  else{primary.textContent='Choisir une séance';primary.onclick=()=>document.getElementById('homeCards')?.scrollIntoView({behavior:getPrefs().motion?'smooth':'auto'});}
+  const summary=document.getElementById('homeSummary');
+  if(!log.length)summary.innerHTML='<b>Dernière séance</b><div class="small muted" style="margin-top:6px">Tes résultats apparaîtront ici après ta première séance.</div>';
+  else{const last=log[0],date=new Date(last.ts).toLocaleDateString('fr-FR');summary.innerHTML=`<b>Dernière séance enregistrée</b><div class="small" style="margin-top:6px">Séance ${escapeHtml(last.letter)} · ${date}${last.partial?' · Partielle':''}</div><button class="btn ghost" type="button" style="margin-top:10px" onclick="openStats()">Voir l’historique</button>`;}
   const host=document.getElementById('homeCards');
   host.innerHTML='';
   const program=getActiveProgram();
@@ -3216,17 +3238,19 @@ function exoCard(L, slotDef){
     ${nextAdviceBox}
 
     ${unit==='reps' ? `` : `
-    <label>Charge utilisée aujourd’hui (${unit})
+    <label>Charge utilisée aujourd’hui (${unit}) <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_load_${slotDef.sid}')">Aide charge</button>
+      <div class="helpText" id="help_load_${slotDef.sid}">${chargeHelp(unit)}</div>
       <input id="load_${slotDef.sid}" type="number" min="0" step="any" value="${Number.isFinite(planLoad)?planLoad:''}" inputmode="decimal"/>
       ${loadHint ? `<div class="small loadHint">${escapeHtml(loadHint)}</div>` : ``}
     </label>`}
 
-    <label>Reps par série (${slotDef.sets} séries)</label>
+    <label>Répétitions par série (${slotDef.sets} séries) <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_reps_${slotDef.sid}')">Aide répétitions</button></label><div class="helpText" id="help_reps_${slotDef.sid}">Note ce que tu as réellement fait pour chaque série.</div>
     <div class="setGrid">${setInputs}</div>
     <div class="small" style="margin-top:8px">Total calculé automatiquement : <b id="repsTotView_${slotDef.sid}">0</b> reps</div>
     <input id="reps_${slotDef.sid}" type="hidden" value="0"/>
 
     ${slotDef.note?`<div class="res">${escapeHtml(slotDef.note)}</div>`:`
+      <div><b>Effort</b> <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_eff_${slotDef.sid}')">Aide effort</button></div><div class="helpText" id="help_eff_${slotDef.sid}">Choisis Facile, OK ou Dur. Ce ressenti participe à la recommandation suivante.</div>
       <div class="seg" id="seg_${slotDef.sid}">
         <button class="sbtn" data-eff="EASY" type="button" onclick="setEff('${slotDef.sid}','EASY')">😌 Facile</button>
         <button class="sbtn" data-eff="OK" type="button" onclick="setEff('${slotDef.sid}','OK')">🙂 OK</button>
@@ -3239,6 +3263,9 @@ function exoCard(L, slotDef){
     `}
   </div>`;
 }
+
+function chargeHelp(unit){if(unit==='kg par haltère')return 'Indique les kilogrammes pour un haltère.';if(unit==='lest (kg)')return 'Indique les kilogrammes de lest ajouté.';if(unit==='kg (assistance)')return 'Indique les kilogrammes d’assistance. Une assistance plus élevée facilite le mouvement.';return 'Indique la charge totale en kilogrammes.';}
+function toggleFieldHelp(button,id){const box=document.getElementById(id),open=!box.classList.contains('on');box.classList.toggle('on',open);button.setAttribute('aria-expanded',String(open));}
 
 function renderSession(L, opts={}){
   const S=getActiveProgram()[L];
@@ -4597,26 +4624,59 @@ function closeDone(){
 }
 
 // ============================
-// Onboarding
+// Première utilisation et guide
 // ============================
-const ONB_KEY='onb_done_v5';
-let onbStep=0;
-const ONB=[
-  {t:'HERO FARM.',b:'Tu entres tes reps + effort (et la charge). Chaque séance compte. Chaque progrès est clair.'},
-  {t:'Repos',b:'Touche ⏱ Repos pour lancer un chronomètre lié à l’exercice.'},
-  {t:'Objectifs',b:'Dans “Objectifs”, renseigne tes RP10 : charges de départ cohérentes même sans historique.'},
-];
-function openOnb(){ const ov=document.getElementById('onb'); onbStep=0; renderOnb(); ov.classList.add('on'); }
-function renderOnb(){
-  const x=ONB[onbStep];
-  document.getElementById('onbT').textContent=x.t;
-  document.getElementById('onbB').textContent=x.b;
-  document.getElementById('onbS').textContent=(onbStep+1)+'/3';
-  document.getElementById('onbN').textContent=(onbStep===2)?'Commencer':'Continuer';
+const ONB_KEY='onb_done_v5', SETUP_KEY='hero_farm_setup_v1', PROFILE_KEY='hero_farm_profile_v1';
+let onbStep=1, onbState={name:'',program:null}, guideOnly=false, onboardingBusy=false;
+function getProfile(){ return jget(PROFILE_KEY,{version:1,name:''}); }
+function readSetup(){ return jget(SETUP_KEY,{version:1,step:1,completed:false,name:'',program:null}); }
+function persistSetup(){
+  if(guideOnly)return true;
+  const result=HFCore.saveSetup(localStorage,{...onbState,step:onbStep});
+  if(!result.ok){ showOnbError('Impossible de sauvegarder cette étape. Tes choix restent affichés.'); return false; }
+  return true;
 }
-function skipOnb(){ closeOnb(); }
-function nextOnb(){ if(onbStep<2){ onbStep++; renderOnb(); return; } closeOnb(); }
-function closeOnb(){ document.getElementById('onb').classList.remove('on'); localStorage.setItem(ONB_KEY,'1'); }
+function sessionDetails(mode){
+  return Object.entries(mode==='hybrid'?PROGRAM_HYBRID:PROGRAM_STRENGTH).map(([letter,x])=>`<div><b>Séance ${letter}</b> — ${escapeHtml(x.sub)}</div>`).join('');
+}
+function programCard(mode){
+  const meta=PROGRAM_META[mode], selected=onbState.program===mode;
+  const desc=mode==='strength'?'Trois séances centrées sur le haut du corps et une séance jambes.':'Le travail des jambes est réparti dans les trois séances. Tes sorties de course restent organisées séparément.';
+  return `<button class="onbProgram${selected?' selected':''}" type="button" aria-pressed="${selected}" onclick="selectOnbProgram('${mode}')"><div class="selectedText">${selected?'✓ Programme sélectionné':''}</div><div class="programName">${meta.name}</div><div class="programFreq">${meta.weekly} séances${mode==='hybrid'?' de musculation':''} par semaine</div><div class="programDesc">${desc}</div><details class="programDetails" onclick="event.stopPropagation()"><summary>Voir les séances</summary>${sessionDetails(mode)}</details></button>`;
+}
+function openOnb({guide=false}={}){
+  guideOnly=guide; const saved=readSetup(); onbState=guide?{name:getProfile().name||'',program:getProgramMode()}:{name:saved.name||'',program:saved.program||null}; onbStep=guide?1:(saved.step||1);
+  renderOnb(); document.getElementById('onb').classList.add('on');
+}
+function openGuide(){closeSettings();openOnb({guide:true});}
+function showOnbError(message){document.getElementById('onbError').textContent=message||'';}
+function renderOnb(){
+  showOnbError(''); const body=document.getElementById('onbB'), title=document.getElementById('onbT');
+  document.getElementById('onbS').textContent=`Étape ${onbStep} sur 3`;
+  [1,2,3].forEach(n=>document.getElementById('onbDot'+n).classList.toggle('on',n<=onbStep));
+  const back=document.getElementById('onbBack'), next=document.getElementById('onbN'); back.style.display=onbStep===1?'none':'';
+  if(onbStep===1){title.textContent='HERO FARM';body.innerHTML=`<div class="onbLead">Tes séances, tes performances, ta progression.</div><div class="onbCopy">Choisis un programme, note tes séries et retrouve tes résultats au fil des séances.</div><label class="onbField" for="onbName">Prénom ou pseudo <span class="small muted">Facultatif · 30 caractères maximum</span><input id="onbName" maxlength="30" autocomplete="nickname"></label>${guideOnly?'':`<button class="btn ghost" type="button" onclick="triggerOnboardingImport()">J'ai déjà une sauvegarde JSON</button><button class="btn ghost" type="button" onclick="document.getElementById('importCsv')?.click()">J'ai une sauvegarde CSV</button>`}`; document.getElementById('onbName').value=onbState.name;next.textContent='Continuer';next.disabled=false;}
+  if(onbStep===2){title.textContent='Choisir son programme';body.innerHTML=`<div class="onbPrograms">${programCard('strength')}${programCard('hybrid')}</div>`;next.textContent='Continuer';next.disabled=!onbState.program;}
+  if(onbStep===3){const name=programLabel(onbState.program);title.textContent='Ta première séance';body.innerHTML=`<div class="onbCopy">Programme choisi : <b>${name}</b></div><div class="onbTips"><div class="onbTip"><b>Charge</b> : renseigne la charge utilisée. Elle peut être différente selon l'exercice et le matériel.</div><div class="onbTip"><b>Répétitions</b> : note ce que tu as réellement fait pour chaque série.</div><div class="onbTip"><b>Effort</b> : indique ton ressenti avec Facile, OK ou Dur. Il participe à la recommandation suivante.</div></div><div class="onbCopy">Le chronomètre t'aide à suivre tes temps de repos. Tu peux interrompre une séance et la reprendre.</div>${guideOnly?'':`<button class="btn ghost" type="button" onclick="finishOnboarding(false)">Aller à l'accueil</button>`}`;next.textContent=guideOnly?'Fermer le guide':'Ouvrir ma première séance';next.disabled=false;}
+}
+function selectOnbProgram(mode){onbState.program=mode;persistSetup();renderOnb();}
+function previousOnb(){if(onbStep>1){onbStep--;persistSetup();renderOnb();}}
+function nextOnb(){
+  if(onbStep===1){onbState.name=HFCore.normalizeName(document.getElementById('onbName')?.value);onbStep=2;if(!persistSetup()){onbStep=1;return;}renderOnb();return;}
+  if(onbStep===2){if(!onbState.program){showOnbError('Choisis explicitement un programme.');return;}onbStep=3;if(!persistSetup()){onbStep=2;return;}renderOnb();return;}
+  if(guideOnly){document.getElementById('onb').classList.remove('on');guideOnly=false;return;} finishOnboarding(true);
+}
+function finishOnboarding(openFirst){
+  if(onboardingBusy)return;onboardingBusy=true;document.getElementById('onbN').disabled=true;
+  const result=HFCore.saveSetup(localStorage,{...onbState,step:3},{complete:true});
+  if(!result.ok){showOnbError('Impossible d’enregistrer le programme. Vérifie l’espace de stockage puis réessaie.');onboardingBusy=false;document.getElementById('onbN').disabled=false;return;}
+  document.getElementById('onb').classList.remove('on');onboardingBusy=false;renderHome();if(openFirst)openSession('A');else goHome();
+}
+function triggerOnboardingImport(){document.getElementById('importJson')?.click();}
+function saveProfileName(){
+  const name=HFCore.normalizeName(document.getElementById('profileName')?.value);
+  try{localStorage.setItem(PROFILE_KEY,JSON.stringify({version:1,name}));if(JSON.parse(localStorage.getItem(PROFILE_KEY)).name!==name)throw Error();toast('Prénom enregistré.');renderHome();}catch{toast('Impossible d’enregistrer le prénom.');}
+}
 
 // Boot
 document.addEventListener('DOMContentLoaded',()=>{
@@ -4698,7 +4758,7 @@ rtUpdateSoundUI();
     }
   }catch{}
 
-  if(!localStorage.getItem(ONB_KEY)) openOnb();
+  if(!HFCore.hasPriorUse(localStorage) && !readSetup().completed) openOnb();
 
   const rebuildKey='rebuild_done_v1';
   if(!localStorage.getItem(rebuildKey)){

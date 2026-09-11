@@ -8,7 +8,8 @@
   const EXACT_KEYS=new Set([
     'paogramme_log_v2','paogramme_cfg_v2','paogramme_active_session_v1','paogramme_session_draft_v1',
     'aurafarm_program_mode_v1','aura_farm_prefs_v1','paogramme_rt_state_v1','paogramme_rt_view_v1',
-    'paogramme_rt_sound_v1','paogramme_recovery_backup_v1','onb_done_v5','rebuild_done_v1'
+    'paogramme_rt_sound_v1','paogramme_recovery_backup_v1','onb_done_v5','rebuild_done_v1',
+    'hero_farm_profile_v1','hero_farm_setup_v1'
   ]);
   const PREFIXES=['last_','state_','rp10_','records_','eff_'];
   const isAllowedKey=k=>typeof k==='string' && (EXACT_KEYS.has(k)||PREFIXES.some(p=>k.startsWith(p)));
@@ -63,6 +64,13 @@
   function collect(storage){ const out={}; for(let i=0;i<storage.length;i++){const k=storage.key(i);if(k!==RECOVERY_KEY&&isAllowedKey(k)) out[k]=storage.getItem(k);} return out; }
   const plainObject=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
   const finiteOrNull=x=>x==null||Number.isFinite(x);
+  function normalizeName(value){return String(value??'').trim().slice(0,30);}
+  function validateProfile(value){
+    if(!plainObject(value)||value.version!==1||typeof value.name!=='string'||value.name.length>30) throw new Error('Profil local invalide');
+  }
+  function validateSetup(value){
+    if(!plainObject(value)||value.version!==1||![1,2,3].includes(value.step)||value.completed!=null&&typeof value.completed!=='boolean'||value.program!=null&&!['strength','hybrid'].includes(value.program)||typeof value.name!=='string'||value.name.length>30) throw new Error('Configuration de démarrage invalide');
+  }
   function validateItem(item,where){
     if(!plainObject(item)) throw new Error(`${where} : exercice invalide`);
     for(const name of ['sid','vid']) if(typeof item[name]!=='string'||!item[name]||!/^[\w.:-]+$/u.test(item[name])) throw new Error(`${where} : ${name} manquant ou dangereux`);
@@ -106,11 +114,13 @@
     if(k==='paogramme_rt_sound_v1'&&!['0','1'].includes(v)) throw new Error('Son du chronomètre invalide');
     if(['onb_done_v5','rebuild_done_v1'].includes(k)&&v!=='1') throw new Error(`Indicateur invalide pour ${k}`);
     let parsed;
-    if(/^(paogramme_log_v2|paogramme_cfg_v2|paogramme_session_draft_v1|aura_farm_prefs_v1|paogramme_rt_state_v1|last_|state_|records_|eff_|rp10_)/.test(k)) try{parsed=JSON.parse(v)}catch{throw new Error(`JSON invalide pour ${k}`)}
+    if(/^(paogramme_log_v2|paogramme_cfg_v2|paogramme_session_draft_v1|aura_farm_prefs_v1|paogramme_rt_state_v1|hero_farm_profile_v1|hero_farm_setup_v1|last_|state_|records_|eff_|rp10_)/.test(k)) try{parsed=JSON.parse(v)}catch{throw new Error(`JSON invalide pour ${k}`)}
     if(k==='paogramme_log_v2') validateLog(parsed);
     else if(k==='paogramme_session_draft_v1') validateDraft(parsed);
     else if(k==='paogramme_cfg_v2' && (!plainObject(parsed)||Object.values(parsed).some(x=>typeof x!=='string'))) throw new Error('Configuration invalide');
     else if(k==='aura_farm_prefs_v1' && (!plainObject(parsed)||(parsed.theme!=null&&!['system','light','dark'].includes(parsed.theme))||(parsed.motion!=null&&typeof parsed.motion!=='boolean'))) throw new Error('Préférences invalides');
+    else if(k==='hero_farm_profile_v1') validateProfile(parsed);
+    else if(k==='hero_farm_setup_v1') validateSetup(parsed);
     else if(k.startsWith('eff_')&&!['EASY','OK','HARD'].includes(parsed)) throw new Error(`Effort invalide pour ${k}`);
     else if(k.startsWith('rp10_')&&(!Number.isFinite(parsed)||parsed<=0)) throw new Error(`Référence invalide pour ${k}`);
     else if(/^(last_|state_|records_)/.test(k)&&!plainObject(parsed)) throw new Error(`État dérivé invalide pour ${k}`);
@@ -183,5 +193,32 @@
   }
   function latestSession(log,letter,programMode){return (log||[]).filter(e=>e?.letter===letter&&(e.programMode||'strength')===programMode).sort((a,b)=>(b.ts||0)-(a.ts||0))[0]||null;}
   function mergeUniqueEntries(existing,incoming){const seen=new Set((existing||[]).map(e=>e?.id).filter(Boolean));return [...(existing||[]),...(incoming||[]).filter(e=>e?.id&&!seen.has(e.id)&&(seen.add(e.id),true))];}
-  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,editHistoryItem,commitSession,latestSession,mergeUniqueEntries};
+  function hasPriorUse(storage){
+    if(storage.getItem('onb_done_v5')==='1') return true;
+    for(const key of ['paogramme_log_v2','paogramme_session_draft_v1','paogramme_active_session_v1']){
+      const raw=storage.getItem(key); if(!raw)continue;
+      if(key==='paogramme_active_session_v1'||raw!=='[]'&&raw!=='{}'&&raw!=='null') return true;
+    }
+    return false;
+  }
+  function saveSetup(storage,input,{complete=false}={}){
+    const name=normalizeName(input?.name),program=input?.program,step=Math.max(1,Math.min(3,Number(input?.step)||1));
+    if(program!=null&&!['strength','hybrid'].includes(program)) return {ok:false,error:new Error('Choisis un programme disponible.')};
+    if(complete&&!program) return {ok:false,error:new Error('Choisis un programme avant de terminer.')};
+    const setup={version:1,step,completed:!!complete,name,program:program||null};
+    try{
+      if(complete){
+        storage.setItem('aurafarm_program_mode_v1',program);
+        storage.setItem('hero_farm_profile_v1',JSON.stringify({version:1,name}));
+      }
+      // Écrit en dernier : « completed » ne peut jamais annoncer un succès partiel.
+      storage.setItem('hero_farm_setup_v1',JSON.stringify(setup));
+      if(complete) storage.setItem('onb_done_v5','1');
+      const verified=JSON.parse(storage.getItem('hero_farm_setup_v1')||'null');
+      if(!verified||verified.completed!==!!complete||verified.program!==setup.program) throw Error('La configuration n’a pas pu être vérifiée.');
+      if(complete&&storage.getItem('aurafarm_program_mode_v1')!==program) throw Error('Le programme n’a pas pu être vérifié.');
+      return {ok:true,setup};
+    }catch(error){return {ok:false,error};}
+  }
+  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,editHistoryItem,commitSession,latestSession,mergeUniqueEntries,normalizeName,validateProfile,validateSetup,hasPriorUse,saveSetup};
 });

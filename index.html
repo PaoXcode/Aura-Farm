@@ -2,11 +2,12 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>HERO FARM V3</title>
   <style>
     :root{--bg:#050505;--t:#f7f7f7;--m:#b8b8b8;--g:#d4af37;--g2:#ffd56a;--b:rgba(212,175,55,.28);--sh:rgba(0,0,0,.78)}
     *{box-sizing:border-box}
+    html{overflow-x:hidden}
     body{margin:0;padding:14px;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI;background:
       radial-gradient(900px 520px at 20% 0%,rgba(212,175,55,.10),transparent 60%),
       radial-gradient(800px 520px at 80% 10%,rgba(255,213,106,.08),transparent 55%),
@@ -53,6 +54,9 @@
     input:focus{border-color:rgba(255,213,106,.55);box-shadow:0 0 0 4px rgba(212,175,55,.10)}
     .seg{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .sbtn{appearance:none;border:1px solid rgba(212,175,55,.28);background:rgba(255,255,255,.03);color:var(--t);padding:8px 10px;border-radius:999px;font-weight:950;cursor:pointer;transition:transform .08s ease,border-color .18s ease,background .18s ease}
+    :where(button,input,select,summary,[tabindex]):focus-visible{outline:3px solid #ffd56a;outline-offset:3px}
+    :where(input,select){font-size:16px;min-height:44px}
+    :where(.btn,.sbtn,.themeBtn,.programTrigger,.helpBtn){min-height:44px}
     .sbtn:hover{border-color:rgba(255,213,106,.55);background:rgba(212,175,55,.08)}
     .sbtn:active{transform:translateY(1px) scale(.99)}
     .sbtn.on{border-color:rgba(255,213,106,.75);background:rgba(212,175,55,.14);color:var(--g2)}
@@ -186,7 +190,7 @@
       appearance:none;border:1px solid rgba(255,213,106,.45);
       background:linear-gradient(180deg,rgba(255,213,106,.35),rgba(212,175,55,.25));
       color:#1a1a1a;
-      width:34px;height:34px;border-radius:10px;
+      width:44px;height:44px;border-radius:12px;
       font-weight:950;cursor:pointer;
       transition:transform .08s ease,filter .18s ease,border-color .18s ease,opacity .18s ease;
     }
@@ -1064,6 +1068,11 @@ body[data-motion=off] .swapBadge::after,
 body[data-motion=off] .boxI::after,
 body[data-motion=off] .rtSetBtn:not(.done)::after{display:none !important}
 
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+  .v3Tab.on::after,.v3Logo::after,.v3Tab.on::before,.card.active-session::after,.goal::after,.asBadge::after,.swapBadge::after,.boxI::after,.rtSetBtn:not(.done)::after{display:none !important}
+}
+
 body[data-theme=light]{
   --bg:#f5f5f7;--t:#1d1d1f;--m:rgba(29,29,31,.68);--sh:rgba(0,0,0,.12);
   --v3-bg:#f5f5f7;--v3-text:#1d1d1f;--v3-muted:rgba(29,29,31,.68);--v3-muted2:rgba(29,29,31,.50);--v3-card:rgba(255,255,255,.72);
@@ -1139,6 +1148,7 @@ body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guided
 .progressHero{margin-top:12px}.metricSwitch{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.chartWrap{overflow:hidden}.progressChart{width:100%;height:auto;display:block}.chartPoint{cursor:pointer}.chartPoint:focus{outline:3px solid var(--v3-accent)}
 .resultList,.historyList{display:grid;gap:10px;margin-top:12px}.resultCard,.historyCard{border:1px solid var(--v3-stroke);border-radius:15px;padding:13px;background:var(--v3-card)}.resultCard button,.historyCard button{margin-top:8px}.statusText{font-weight:850}.sessionDetail table{width:100%}.dangerZone{border-top:1px solid var(--v3-stroke);margin-top:18px;padding-top:14px}.emptyState{text-align:center;padding:28px 14px}.emptyState .btn{margin-top:12px}
 @media(max-width:600px){.progressControls,.progressFilters{grid-template-columns:1fr}.sessionDetail table,.sessionDetail tbody,.sessionDetail tr,.sessionDetail td{display:block}.sessionDetail thead{display:none}.sessionDetail tr{padding:10px 0;border-bottom:1px solid var(--v3-stroke)}.sessionDetail td{padding:5px 0}.progressTabs .sbtn{flex:1;padding-inline:8px}.chartPoint{stroke-width:12}}
+@media(max-width:600px){.boxH{align-items:center}.boxH>.btn{flex:0 0 auto}.rt{bottom:max(10px,env(safe-area-inset-bottom));max-height:calc(100dvh - 20px);overflow:auto}.rtA{width:100%}.rtBtn{min-width:44px}.progressTabs{overflow-x:auto;overscroll-behavior-inline:contain}.progressTabs .sbtn{flex:1 0 auto}}
 body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{background:rgba(255,255,255,.65);border-color:rgba(29,29,31,.14)}
 </style>
 </head>
@@ -1351,7 +1361,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 </div>
 
 <!-- Focus mode -->
-<div class="focus" id="focus">
+<div class="focus" id="focus" role="dialog" aria-modal="true" aria-labelledby="fTitle">
   <div class="focusBox">
     <div class="focusHead">
       <div style="display:flex;gap:12px;align-items:center">
@@ -1368,7 +1378,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 </div>
 
 <!-- Swap overlay -->
-<div class="overlay" id="swap">
+<div class="overlay" id="swap" role="dialog" aria-modal="true" aria-labelledby="swapT">
   <div class="box">
     <div class="boxH">
       <div style="display:flex;gap:12px;align-items:center">
@@ -1382,7 +1392,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
     </div>
     <div class="boxP" id="swapB" style="margin-top:10px">Même logique, même groupe musculaire. Historique conservé par exercice choisi.</div>
     <div class="swapTools">
-      <input id="swapSearch" class="swapSearch" type="text" placeholder="Recherche rapide (barre, haltères, machine…)" oninput="renderSwapOptions()"/>
+      <input id="swapSearch" class="swapSearch" type="search" aria-label="Rechercher une variante" placeholder="Recherche rapide (barre, haltères, machine…)" oninput="renderSwapOptions()"/>
       <button id="swapFilterAll" class="swapFilter on" type="button" onclick="setSwapFilter('all')">Tous</button>
       <button id="swapFilterMachine" class="swapFilter" type="button" onclick="setSwapFilter('machine')">Machines</button>
       <button id="swapFilterFree" class="swapFilter" type="button" onclick="setSwapFilter('free')">Libres</button>

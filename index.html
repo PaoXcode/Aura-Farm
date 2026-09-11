@@ -2630,10 +2630,12 @@ function rebuildDerivedStateFromLog(){
         ? {vid:meta.vid, name:meta.name, unit:meta.unit || item.unit || 'kg', step:meta.step, pct:meta.pct}
         : {vid:item.vid, name:item.name, unit:item.unit || 'kg', pct:2.5};
       const eff=item.eff || 'OK';
-      const rx=decideNext(slotDef, variant, item.repsTot, eff, item.load ?? 0);
       const isReps=(item.unit === 'reps') || (variant.unit === 'reps');
-      const performedLoad=isReps ? 0 : (item.load ?? 0);
-      const nextLoad=isReps ? (Number.isFinite(rx.nextLoad) ? rx.nextLoad : 0) : rx.nextLoad;
+      const hasKnownLoad=isReps||Number.isFinite(item.load);
+      const completed=HFCore.isCompletedExercise(item);
+      const rx=(completed&&hasKnownLoad)?decideNext(slotDef, variant, item.repsTot, eff, isReps?0:item.load):null;
+      const performedLoad=isReps ? 0 : (Number.isFinite(item.load)?item.load:null);
+      const nextLoad=rx?(isReps ? (Number.isFinite(rx.nextLoad) ? rx.nextLoad : 0) : rx.nextLoad):null;
 
       setLast(item.vid, {
         performedTs: entry.ts,
@@ -2641,7 +2643,9 @@ function rebuildDerivedStateFromLog(){
         performedTotalReps: item.repsTot,
         performedEff: eff,
         nextLoad: nextLoad,
-        nextRepsPerSet: rx.nextRPS,
+        nextRepsPerSet: rx?.nextRPS??null,
+        incomplete:!completed,
+        missingLoad:!hasKnownLoad,
       });
       updatePersonalRecords(variant,item.repsTot,item.load);
     }catch{
@@ -4019,6 +4023,10 @@ function renderStats(){
 
     const rows=(entry.items||[]).map(it=>{
       const did=it.repsTot!=null;
+      const detailed=Array.isArray(it.setReps)&&it.setReps.length>0&&!it.legacyAggregate;
+      const repsEditor=detailed
+        ? `<div class="row">${it.setReps.map((r,i)=>`<input style="margin:0;min-width:64px" aria-label="Série ${i+1}" type="number" min="1" step="1" value="${r}" id="ed_set_${entry.id}_${it.sid}_${i}">`).join('')}</div>`
+        : `<input style="margin:0" type="number" min="1" step="1" placeholder="reps agrégées" value="${did?it.repsTot:''}" id="ed_reps_${entry.id}_${it.sid}">`;
       const right=did
         ? (it.unit==='reps'
             ? `${it.repsTot} reps`
@@ -4027,7 +4035,7 @@ function renderStats(){
       return `<tr>
         <td style="width:40%">${escapeHtml(it.name)}<div class="small muted">${escapeHtml(it.muscle||'')}</div></td>
         <td>${right}</td>
-        <td style="width:140px"><input style="margin:0" type="number" placeholder="reps" value="${did?it.repsTot:''}" id="ed_reps_${entry.id}_${it.sid}"></td>
+        <td style="width:220px">${repsEditor}</td>
         <td style="width:160px"><input style="margin:0" type="number" placeholder="charge" value="${it.load??''}" id="ed_load_${entry.id}_${it.sid}"></td>
       </tr>`;
     }).join('');
@@ -4053,10 +4061,14 @@ function saveEdit(entryId){
   const items=[];
   for(const it of (entry.items||[])){
     const repsField=document.getElementById(`ed_reps_${entryId}_${it.sid}`), loadField=document.getElementById(`ed_load_${entryId}_${it.sid}`);
-    const repsCheck=HFCore.validateReps(repsField?.value,{allowEmpty:true});
+    const detailed=Array.isArray(it.setReps)&&it.setReps.length>0&&!it.legacyAggregate;
+    const setFields=detailed?it.setReps.map((_,i)=>document.getElementById(`ed_set_${entryId}_${it.sid}_${i}`)):[];
+    const setChecks=setFields.map(field=>HFCore.validateReps(field?.value,{allowEmpty:true}));
+    const repsCheck=detailed?{ok:setChecks.every(x=>x.ok),value:null,error:setChecks.find(x=>!x.ok)?.error}:HFCore.validateReps(repsField?.value,{allowEmpty:true});
     const loadCheck=(it.unit==='reps'||loadField?.value==='')?{ok:true,value:it.unit==='reps'?null:(it.load??null)}:HFCore.validateLoad(loadField.value,HFCore.chargeKind(it.unit));
-    if(!repsCheck.ok||!loadCheck.ok){ toast(repsCheck.error||loadCheck.error); (repsCheck.ok?loadField:repsField)?.setAttribute('aria-invalid','true'); return; }
-    items.push({...it,repsTot:repsCheck.value,load:loadCheck.value,setReps:[],legacyAggregate:repsCheck.value!=null});
+    if(!repsCheck.ok||!loadCheck.ok){ toast(repsCheck.error||loadCheck.error); (repsCheck.ok?loadField:(setFields[setChecks.findIndex(x=>!x.ok)]||repsField))?.setAttribute('aria-invalid','true'); return; }
+    try{items.push(HFCore.editHistoryItem(it,{load:loadCheck.value,...(detailed?{setReps:setChecks.map(x=>x.value).filter(x=>x!=null)}:{repsTot:repsCheck.value})}));}
+    catch(error){toast(error.message);return;}
   }
   const vol=computeVolume(items);
   const total=Object.values(vol).reduce((a,b)=>a+b,0);
@@ -4374,11 +4386,28 @@ function restoreFullBackup(file){
     try{ payload=HFCore.validateBackup(payload); }catch(error){ toast(error.message); return; }
     if(!confirm('Cette action remplacera toutes les données existantes.')) return;
     const result=HFCore.restoreBackup(localStorage,payload);
-    if(!result.ok){ toast('Restauration impossible. Les anciennes données ont été conservées.'); return; }
+    if(!result.ok){
+      toast(result.restored?'Restauration échouée ; anciennes données rétablies et copie de récupération conservée.':result.recoveryAvailable?'Restauration échouée ; copie de récupération disponible au prochain démarrage.':'Restauration échouée ; état du stockage non vérifié.');
+      return;
+    }
     location.reload();
   };
   reader.onerror=()=>toast('Lecture de la sauvegarde impossible.');
   reader.readAsText(file);
+}
+
+function exportRecoveryCopy(recovery){
+  const blob=new Blob([JSON.stringify(recovery.backup)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='hero_farm_recuperation.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+function handleInterruptedRecovery(){
+  const recovery=HFCore.inspectRecovery(localStorage);if(!recovery)return true;
+  if(!recovery.valid){alert(`Une restauration interrompue a été détectée, mais sa copie est illisible : ${recovery.error}`);return false;}
+  if(confirm('Une restauration précédente a été interrompue. OK : rétablir les anciennes données. Annuler : exporter leur copie avant de continuer.')){
+    const result=HFCore.recoverBackup(localStorage);if(result.ok){alert('Anciennes données rétablies et vérifiées.');return true;}
+    alert('Récupération impossible. La copie durable est conservée.');return false;
+  }
+  exportRecoveryCopy(recovery);alert('Copie de récupération exportée. Les données courantes ne sont pas ouvertes pour éviter un état partiel.');return false;
 }
 
 // ============================
@@ -4543,10 +4572,16 @@ function openDone(){
     }
   }
   const items=buildSessionSnapshot(L);
+  const sessionCheck=HFCore.validateSessionItems(items);
+  if(!sessionCheck.ok){
+    const field=document.getElementById(`load_${sessionCheck.sid}`);
+    field?.setAttribute('aria-invalid','true'); field?.focus();
+    saveDraft(L,items); toast(sessionCheck.error); finishingSession=false; return;
+  }
   const validItems=items.filter(it=>it.repsTot!=null && it.repsTot>0);
   if(!validItems.length){ toast('Aucune série réalisée : brouillon conservé.'); finishingSession=false; return; }
   const vol=computeVolume(items), total=Object.values(vol).reduce((a,b)=>a+b,0);
-  const entry={id:currentSessionId||newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),partial:validItems.length<items.filter(it=>!it.note).length,items,vol,total};
+  const entry={id:currentSessionId||newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),partial:items.filter(it=>!it.note).some(it=>!HFCore.isCompletedExercise(it)),items,vol,total};
   const result=HFCore.commitSession(localStorage,entry,DRAFT_KEY,LOG_KEY);
   finishingSession=false;
   if(!result.ok){ toast('Échec de l’enregistrement : brouillon conservé.'); return; }
@@ -4585,6 +4620,7 @@ function closeOnb(){ document.getElementById('onb').classList.remove('on'); loca
 
 // Boot
 document.addEventListener('DOMContentLoaded',()=>{
+  if(!handleInterruptedRecovery()) return;
   applyPrefs();
   document.getElementById('settingsBtn')?.addEventListener('click',openSettings);
   document.getElementById('statsBtn').addEventListener('click',openStats);

@@ -9,6 +9,12 @@ class MemoryStorage{
   setItem(k,v){if(++this.writes===this.failAt)throw Error('quota');this.data.set(k,String(v));}
   removeItem(k){this.data.delete(k);}
 }
+class PersistentFailureStorage extends MemoryStorage{
+  setItem(k,v){if(++this.writes>=this.failAt)throw Error('persistent quota');this.data.set(k,String(v));}
+}
+const item=(overrides={})=>({sid:'A1',vid:'decline_machine',name:'Développé',unit:'kg',sets:4,lo:6,hi:10,load:60,repsTot:24,setReps:[6,6,6,6],eff:'OK',...overrides});
+const entry=(overrides={})=>({id:'session-1',ts:1,letter:'A',programMode:'strength',items:[item()],...overrides});
+const backup=storage=>({schema:'hero-farm-backup',version:4,storage});
 
 test('les types de charge ne sont pas convertis entre variantes',()=>{
   assert.equal(core.comparableUnit('kg','kg par haltère'),false);
@@ -93,4 +99,76 @@ test('la fusion répétée reste idempotente',()=>{
   const row={id:'csv-A-2026-01-01-1000'};
   const once=core.mergeUniqueEntries([], [row]);
   assert.equal(core.mergeUniqueEntries(once,[row]).length,1);
+});
+
+test('une panne persistante conserve une copie durable récupérable après redémarrage',()=>{
+  const old=JSON.stringify([entry({id:'original'})]);
+  const s=new PersistentFailureStorage({paogramme_log_v2:old},3);
+  const result=core.restoreBackup(s,backup({paogramme_log_v2:'[]',aura_farm_prefs_v1:'{}'}));
+  assert.equal(result.ok,false);assert.equal(result.restored,false);assert.equal(result.recoveryAvailable,true);
+  const restarted=new MemoryStorage(Object.fromEntries(s.data));
+  assert.equal(core.inspectRecovery(restarted).valid,true);
+  assert.equal(core.recoverBackup(restarted).ok,true);
+  assert.equal(restarted.getItem('paogramme_log_v2'),old);
+  assert.equal(restarted.getItem(core.RECOVERY_KEY),null);
+});
+
+test('si la copie de secours ne peut pas être écrite, aucune donnée ne mute',()=>{
+  const old=JSON.stringify([entry({id:'original'})]),s=new MemoryStorage({paogramme_log_v2:old},1);
+  const before=Object.fromEntries(s.data),result=core.restoreBackup(s,backup({paogramme_log_v2:'[]'}));
+  assert.equal(result.ok,false);assert.equal(result.recoveryAvailable,false);assert.deepEqual(Object.fromEntries(s.data),before);
+});
+
+test('une interruption à chaque phase critique reste détectable et récupérable',()=>{
+  const original=JSON.stringify([entry({id:'original'})]);
+  const recoveryStorage=new MemoryStorage({paogramme_log_v2:original});
+  const envelope=JSON.stringify({schema:'hero-farm-recovery',version:1,status:'prepared',backup:core.createBackup(recoveryStorage,1)});
+  for(const partial of [
+    {[core.RECOVERY_KEY]:envelope,paogramme_log_v2:original},
+    {[core.RECOVERY_KEY]:envelope},
+    {[core.RECOVERY_KEY]:envelope,paogramme_log_v2:'[]'},
+    {[core.RECOVERY_KEY]:envelope,paogramme_log_v2:'[]',aura_farm_prefs_v1:'{}'}
+  ]){const boot=new MemoryStorage(partial);assert.equal(core.inspectRecovery(boot).valid,true);assert.equal(core.recoverBackup(boot).ok,true);assert.equal(boot.getItem('paogramme_log_v2'),original);}
+});
+
+test('la clôture réelle refuse une charge absente puis accepte la correction',()=>{
+  const draft=[item({load:null,repsTot:6,setReps:[6]})];
+  assert.deepEqual(core.validateSessionItems(draft),{ok:false,sid:'A1',error:'Développé : Charge requise.'});
+  draft[0].load=60;assert.deepEqual(core.validateSessionItems(draft),{ok:true});
+  assert.equal(core.validateSessionItems([item({load:null,repsTot:null,setReps:[]})]).ok,true);
+  assert.equal(core.validateSessionItems([item({unit:'lest (kg)',load:0})]).ok,true);
+  assert.equal(core.validateSessionItems([item({unit:'kg (assistance)',load:0})]).ok,true);
+});
+
+test('les exercices partiels ne sont pas des échecs complets, les vrais résultats le sont',()=>{
+  for(let i=0;i<3;i++)assert.equal(core.isCompletedExercise(item({repsTot:6,setReps:[6]})),false);
+  for(let i=0;i<3;i++)assert.equal(core.isCompletedExercise(item({repsTot:20,setReps:[5,5,5,5]})),true);
+  assert.equal(core.isCompletedExercise(item({legacyAggregate:true,setReps:[],performedSets:4,repsTot:20})),true);
+  assert.equal(core.isCompletedExercise(item({legacyAggregate:true,setReps:[],repsTot:20})),false);
+});
+
+test('édition inchangée, charge seule et séries conservent le détail',()=>{
+  const original=item();
+  assert.deepEqual(core.editHistoryItem(original,{repsTot:24,load:60}),original);
+  assert.deepEqual(core.editHistoryItem(original,{repsTot:24,load:62}).setReps,[6,6,6,6]);
+  const changed=core.editHistoryItem(original,{load:60,setReps:[7,7,6,6]});
+  assert.equal(changed.repsTot,26);assert.deepEqual(changed.setReps,[7,7,6,6]);assert.equal(changed.legacyAggregate,false);
+});
+
+test('un ancien agrégat conserve sa convention explicite',()=>{
+  const legacy=item({setReps:[],legacyAggregate:true,performedSets:4});
+  const changed=core.editHistoryItem(legacy,{repsTot:25,load:60});
+  assert.equal(core.performedSets(changed),4);assert.equal(changed.legacyAggregate,true);assert.deepEqual(changed.setReps,[]);
+});
+
+test('les sauvegardes sémantiquement invalides sont rejetées sans mutation',()=>{
+  const badLogs=['42','null','"texte"',JSON.stringify([entry({items:[item({repsTot:12,setReps:[6]})]})]),JSON.stringify([entry({items:[item({load:'NaN'})]})]),JSON.stringify([entry({id:'<img onerror=alert(1)>'})])];
+  for(const log of badLogs){const s=new MemoryStorage({paogramme_log_v2:JSON.stringify([entry({id:'safe'})])}),before=Object.fromEntries(s.data);assert.throws(()=>core.restoreBackup(s,backup({paogramme_log_v2:log})));assert.deepEqual(Object.fromEntries(s.data),before);}
+  assert.throws(()=>core.validateBackup(backup({aura_farm_prefs_v1:'{"theme":"neon"}'})),/Préférences/);
+  assert.throws(()=>core.validateBackup(backup({paogramme_session_draft_v1:'{"sessionId":7,"items":[]}'})),/identifiant/);
+});
+
+test('la restauration réussie et sa validation sont idempotentes',()=>{
+  const payload=backup({paogramme_log_v2:JSON.stringify([entry()])});
+  for(let i=0;i<2;i++){const s=new MemoryStorage();assert.equal(core.restoreBackup(s,payload).ok,true);assert.deepEqual(core.validateBackup(core.createBackup(s)).storage,payload.storage);}
 });

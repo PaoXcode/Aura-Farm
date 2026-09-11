@@ -71,7 +71,7 @@
   function validateSetup(value){
     if(!plainObject(value)||value.version!==1||![1,2,3].includes(value.step)||value.completed!=null&&typeof value.completed!=='boolean'||value.program!=null&&!['strength','hybrid'].includes(value.program)||typeof value.name!=='string'||value.name.length>30) throw new Error('Configuration de démarrage invalide');
   }
-  function validateItem(item,where){
+  function validateItem(item,where,{draft=false}={}){
     if(!plainObject(item)) throw new Error(`${where} : exercice invalide`);
     for(const name of ['sid','vid']) if(typeof item[name]!=='string'||!item[name]||!/^[\w.:-]+$/u.test(item[name])) throw new Error(`${where} : ${name} manquant ou dangereux`);
     if(item.unit!=null&&!['kg','kg par haltère','kg (assistance)','lest (kg)','reps'].includes(item.unit)) throw new Error(`${where} : unité invalide`);
@@ -79,8 +79,8 @@
     if(!finiteOrNull(item.load)||item.load<0) throw new Error(`${where} : charge invalide`);
     if(!finiteOrNull(item.repsTot)||item.repsTot<0||!Number.isInteger(item.repsTot)) throw new Error(`${where} : total de répétitions invalide`);
     if(item.setReps!=null){
-      if(!Array.isArray(item.setReps)||item.setReps.some(r=>!Number.isInteger(r)||r<=0)) throw new Error(`${where} : séries invalides`);
-      if(item.repsTot!=null&&item.setReps.reduce((a,b)=>a+b,0)!==item.repsTot) throw new Error(`${where} : total incohérent avec les séries`);
+      if(!Array.isArray(item.setReps)||item.setReps.some(r=>r!=null&&(!Number.isInteger(r)||r<=0))) throw new Error(`${where} : séries invalides`);
+      if(item.repsTot!=null&&item.setReps.reduce((a,b)=>a+(Number.isInteger(b)?b:0),0)!==item.repsTot) throw new Error(`${where} : total incohérent avec les séries`);
     }
     if(item.eff!=null&&!['EASY','OK','HARD'].includes(item.eff)) throw new Error(`${where} : effort invalide`);
   }
@@ -99,12 +99,13 @@
     });
   }
   function validateDraft(value){
-    if(Array.isArray(value)){value.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`));return;}
+    if(Array.isArray(value)){value.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`,{draft:true}));return;}
     if(!plainObject(value)||!Array.isArray(value.items)) throw new Error('Brouillon invalide');
     if(value.sessionId!=null&&(typeof value.sessionId!=='string'||!value.sessionId)) throw new Error('Brouillon : identifiant invalide');
     if(value.letter!=null&&typeof value.letter!=='string') throw new Error('Brouillon : séance invalide');
     if(value.programMode!=null&&!['strength','hybrid'].includes(value.programMode)) throw new Error('Brouillon : programme invalide');
-    value.items.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`));
+    if(value.version!=null&&value.version!==2) throw new Error('Brouillon : version invalide');
+    value.items.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`,{draft:true}));
   }
   function validateStoredValue(k,v){
     if(typeof v!=='string') throw new Error(`Valeur invalide pour ${k}`);
@@ -178,6 +179,16 @@
     return {ok:true};
   }
   function isCompletedExercise(item){return !!item&&!item.note&&performedSets(item)>0&&((item.legacyAggregate&&Number.isInteger(item.performedSets)&&item.performedSets>=item.sets)||(!item.legacyAggregate&&performedSets(item)>=(item.sets||1)));}
+  function normalizeSetSlots(values,count){
+    return Array.from({length:Math.max(0,Number(count)||0)},(_,i)=>validateReps(values?.[i],{allowEmpty:false}).ok?Number(values[i]):null);
+  }
+  function sessionSummary(entry){
+    const items=Array.isArray(entry?.items)?entry.items:[];
+    const completed=items.filter(isCompletedExercise).length;
+    const partial=items.filter(x=>performedSets(x)>0&&!isCompletedExercise(x)).length;
+    const performed=items.reduce((sum,x)=>sum+performedSets(x),0);
+    return {completed,partial,performed,empty:performed===0,status:entry?.partial||partial>0?'partial':'complete'};
+  }
   function editHistoryItem(item,{repsTot,load,setReps}={}){
     const next={...item}; if(!Array.isArray(item.setReps))next.legacyAggregate=true;if(load!==undefined)next.load=load;
     if(setReps!==undefined){next.setReps=setReps.slice();next.repsTot=setReps.reduce((a,b)=>a+b,0)||null;next.legacyAggregate=false;delete next.performedSets;}
@@ -220,5 +231,5 @@
       return {ok:true,setup};
     }catch(error){return {ok:false,error};}
   }
-  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,editHistoryItem,commitSession,latestSession,mergeUniqueEntries,normalizeName,validateProfile,validateSetup,hasPriorUse,saveSetup};
+  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,normalizeSetSlots,sessionSummary,editHistoryItem,commitSession,latestSession,mergeUniqueEntries,normalizeName,validateProfile,validateSetup,hasPriorUse,saveSetup};
 });

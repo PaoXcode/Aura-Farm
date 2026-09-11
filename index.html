@@ -1133,6 +1133,13 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
 @media(max-width:390px){.focusBox{padding:15px;border-radius:22px}.setRow{grid-template-columns:1fr 92px}.setState{grid-column:1/-1}.guidedActions .btn{width:100%}}
 body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guidedEffort .sbtn.on{color:#17120a}
 
+
+.progressTabs{display:flex;gap:8px;margin:14px 0;position:sticky;top:0;z-index:2;padding:6px;background:color-mix(in srgb,var(--v3-bg) 88%,transparent);border-radius:16px}.progressTabs .on{border-color:var(--g);box-shadow:inset 0 0 0 1px var(--g)}
+.progressControls,.progressFilters{display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px}.progressControls label,.progressFilters label{margin:0}.progressControls select,.progressFilters select{margin-top:6px}
+.progressHero{margin-top:12px}.metricSwitch{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.chartWrap{overflow:hidden}.progressChart{width:100%;height:auto;display:block}.chartPoint{cursor:pointer}.chartPoint:focus{outline:3px solid var(--v3-accent)}
+.resultList,.historyList{display:grid;gap:10px;margin-top:12px}.resultCard,.historyCard{border:1px solid var(--v3-stroke);border-radius:15px;padding:13px;background:var(--v3-card)}.resultCard button,.historyCard button{margin-top:8px}.statusText{font-weight:850}.sessionDetail table{width:100%}.dangerZone{border-top:1px solid var(--v3-stroke);margin-top:18px;padding-top:14px}.emptyState{text-align:center;padding:28px 14px}.emptyState .btn{margin-top:12px}
+@media(max-width:600px){.progressControls,.progressFilters{grid-template-columns:1fr}.sessionDetail table,.sessionDetail tbody,.sessionDetail tr,.sessionDetail td{display:block}.sessionDetail thead{display:none}.sessionDetail tr{padding:10px 0;border-bottom:1px solid var(--v3-stroke)}.sessionDetail td{padding:5px 0}.progressTabs .sbtn{flex:1;padding-inline:8px}.chartPoint{stroke-width:12}}
+body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{background:rgba(255,255,255,.65);border-color:rgba(29,29,31,.14)}
 </style>
 </head>
 <body>
@@ -1153,7 +1160,7 @@ body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guided
     <div class="v3Nav" role="navigation" aria-label="Navigation">
       <button class="v3Tab on" type="button" id="sessionsBtn">Séances</button>
       <button class="v3Tab" type="button" id="goalsBtn">Objectifs</button>
-      <button class="v3Tab" type="button" id="statsBtn">Stats</button>
+      <button class="v3Tab" type="button" id="statsBtn">Progrès</button>
     </div>
   </div>
 </header>
@@ -1229,7 +1236,7 @@ body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guided
   <section id="vStats" style="display:none">
     <div class="row" style="margin-top:2px">
       <div id="hintStats" class="small" style="display:none;margin-bottom:6px;color:rgba(255,213,106,.95)"></div>
-      <h1 style="font-size:18px;font-weight:950;margin:0">Stats</h1>
+      <h1 style="font-size:18px;font-weight:950;margin:0">Progrès</h1>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Retour</button>
         <button class="btn ghost" type="button" onclick="triggerJsonRestore()">Restaurer depuis une sauvegarde (JSON)</button>
@@ -1241,23 +1248,31 @@ body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guided
     <input id="importCsv" type="file" accept=".csv,text/csv" style="display:none"/>
     <input id="importJson" type="file" accept=".json,application/json" style="display:none"/>
 
-    <div class="panel" style="margin-top:12px">
-      <div style="font-weight:950">Séries semaine</div>
-      <div class="small" id="weekRange" style="margin-top:6px">—</div>
-      <div id="weekVol"></div>
+    <div class="progressTabs" role="tablist" aria-label="Vues des progrès">
+      <button class="sbtn on" id="progressExerciseTab" type="button" onclick="setProgressView('exercise')">Exercices</button>
+      <button class="sbtn" id="progressHistoryTab" type="button" onclick="setProgressView('history')">Historique</button>
+      <button class="sbtn" id="progressActivityTab" type="button" onclick="setProgressView('activity')">Activité</button>
     </div>
-
-    <div class="panel" style="margin-top:12px">
-      <div style="font-weight:950">Résumé visuel</div>
-      <div id="trend"></div>
+    <div id="progressExercise" class="progressView">
+      <div class="panel progressControls">
+        <label>Rechercher un exercice<input id="exerciseSearch" type="search" placeholder="Nom de l’exercice" oninput="renderExercisePicker()"></label>
+        <label>Exercice<select id="exerciseSelect" onchange="selectExercise(this.value)"></select></label>
+        <label>Période<select id="exercisePeriod" onchange="setExercisePeriod(this.value)"><option value="30">30 jours</option><option value="90" selected>90 jours</option><option value="all">Tout</option></select></label>
+      </div>
+      <div id="exerciseProgress"></div>
     </div>
-
-    <div class="panel" style="margin-top:12px">
-      <div style="font-weight:950">Historique</div>
-      <div class="small" style="margin-top:6px">Tu peux modifier reps/charge si tu t’es trompé.</div>
-      <div id="hist" class="hist-scroll"></div>
-      <div class="small" style="margin-top:10px;color:rgba(255,213,106,.9)">⚠️ Conseil : exporte 1×/semaine pour te faire une sauvegarde CSV.</div>
-      <div class="small" style="margin-top:6px;color:rgba(255,255,255,.72)">Astuce : importe un export CSV HERO FARM pour restaurer l’historique après une mise à jour.</div>
+    <div id="progressHistory" class="progressView" hidden>
+      <div class="panel progressFilters" aria-label="Filtres de l’historique">
+        <label>Programme<select id="historyProgram" onchange="applyHistoryFilters()"><option value="all">Tous</option><option value="strength">Musculation</option><option value="hybrid">Hybride</option></select></label>
+        <label>Période<select id="historyPeriod" onchange="applyHistoryFilters()"><option value="30">30 jours</option><option value="90">90 jours</option><option value="all" selected>Tout</option></select></label>
+        <label>Statut<select id="historyStatus" onchange="applyHistoryFilters()"><option value="all">Tous</option><option value="complete">Complètes</option><option value="partial">Partielles</option></select></label>
+      </div>
+      <div id="hist" aria-live="polite"></div>
+      <button class="btn ghost" id="historyMore" type="button" onclick="showMoreHistory()" hidden>Afficher plus</button>
+    </div>
+    <div id="progressActivity" class="progressView" hidden>
+      <div class="panel"><div style="font-weight:950">Activité</div><div class="small muted">Résumé factuel des séries enregistrées, sans portée médicale.</div><div id="weekRange"></div><div id="weekVol"></div></div>
+      <div class="panel" style="margin-top:12px"><div style="font-weight:950">Résumé visuel</div><div id="trend"></div></div>
     </div>
   </section>
 </div>
@@ -3942,159 +3957,76 @@ function appleMsgIntensity(p, easySets, okSets, hardSets){
   if(easyPct>0.60) return 'Trop “Facile”. Charge +.';
   return 'Bien dosé. Reste “OK”.';
 }
-function renderStats(){
-  const log=getLog().slice().sort((a,b)=>b.ts-a.ts);
-  const host=document.getElementById('hist');
-  if(!log.length){
-    document.getElementById('weekRange').textContent='—';
-    document.getElementById('weekVol').innerHTML='<div class="small">Pas encore de stats.</div>';
-    document.getElementById('trend').innerHTML='';
-    host.innerHTML='<div class="small">Pas encore d’historique.</div>';
-    return;
-  }
-
-  // ✅ Semaine en cours (séries par groupe)
-  const now=new Date();
-  const ws=startOfWeek(now), we=endOfWeek(now);
-  document.getElementById('weekRange').textContent = `${fmtDate(ws)} → ${fmtDate(we)}`;
-
-  const weekly={};
-  const weeklyItems=[];
-  for(const e of log){
-    if(e.ts<ws.getTime()||e.ts>we.getTime()) continue;
-    for(const [k,v] of Object.entries(e.vol||{})) weekly[k]=(weekly[k]||0)+v;
-    weeklyItems.push(...(e.items||[]));
-  }
-  const localFatigue=computeLocalFatigue(weeklyItems);
-
-  const musclesList=[M.CHEST,M.BACK,M.BICEPS,M.TRICEPS,M.SHO,M.QUADS,M.HAMS,M.CALVES];
-  const max=Math.max(1,...musclesList.map(m=>weekly[m]||0));
-
-  document.getElementById('weekVol').innerHTML = `<div class="small muted">Estimations issues des séries réellement renseignées dans le journal, sans portée médicale.</div><table>${musclesList.map(m=>{
-    const v=weekly[m]||0; const pct=Math.round((v/max)*100);
-    const label=localFatigue[m]?.label || 'OK';
-    const cls=localFatigueClass(label);
-    return `<tr><th>${m}</th><td style="width:90px"><b>${seriesFmt(v)}</b> séries</td><td><div class="bar"><i style="width:${pct}%"></i></div></td><td style="width:112px"><span class="fatigueBadge ${cls}">${label}</span></td></tr>`;
-  }).join('')}</table>`;
-
-  // ✅ Résumé visuel (4 semaines glissantes)
-  const winStart = Date.now() - 28*24*60*60*1000;
-
-  // Rythme = séances terminées (objectif 12 sur 4 semaines = 3 / semaine)
-  const sessions4 = log.filter(e=>e.ts>=winStart).length;
-  const rhythmTarget=12; // objectif historique conservé; Hybride = 3/semaine
-  const rhythmWeekly=3;
-  const pRhythm = Math.min(1, sessions4/rhythmTarget);
-
-  // Intensité = pondération des efforts (par séries)
-  let setsEasy4=0, setsOK4=0, setsHard4=0;
-  for(const e of log){
-    if(e.ts<winStart) continue;
-    for(const it of (e.items||[])){
-      if(it.repsTot==null) continue;
-      if(it.note) continue;
-      const s = Number.isFinite(it.sets)?it.sets:0;
-      if(!s) continue;
-      if(it.eff==='EASY') setsEasy4 += s;
-      else if(it.eff==='HARD') setsHard4 += s;
-      else if(it.eff==='OK') setsOK4 += s;
-    }
-  }
-  const totalSets4 = setsEasy4+setsOK4+setsHard4;
-
-  // Score simple: OK plein, HARD 0.9, EASY 0.6 (lisible + prudent)
-  const intensityScore4 = totalSets4 ? ((setsOK4*1.0 + setsHard4*0.9 + setsEasy4*0.6) / totalSets4) : 0;
-  const pInt = clamp01(intensityScore4);
-
-  document.getElementById('trend').innerHTML = `
-  <div class="rvMeta">Basé sur tes 4 dernières semaines • Objectif rythme : ${rhythmWeekly} séances / semaine</div>
-
-  <div class="rvGrid2">
-    <div class="rvCard2">
-      <div class="rvRing">${ringOneSVG(pRhythm,'rgba(255,77,77,.98)')}</div>
-      <div class="rvLabel">Rythme</div>
-      <div class="rvSmall">${sessions4} / ${rhythmTarget} séances</div>
-      <div class="rvHint">${appleMsgRhythm(pRhythm, sessions4)}</div>
-    </div>
-
-    <div class="rvCard2">
-      <div class="rvRing">${ringOneSVG(pInt,'rgba(246,200,82,.98)')}</div>
-      <div class="rvLabel">Intensité</div>
-      <div class="rvSmall">${Math.round(intensityScore4*100)}% qualité</div>
-      <div class="rvHint">${appleMsgIntensity(pInt, setsEasy4, setsOK4, setsHard4)}</div>
-    </div>
-  </div>
-`;
-
-  // ✅ Historique (inchangé)
-  host.innerHTML = log.slice(0,12).map(entry=>{
-    const dt=new Date(entry.ts);
-    const modeLabel=programLabel(entry.programMode || 'strength');
-    const title = `<span class="session-letter">${entry.letter}</span> • ${dt.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})} ${dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
-    const volTxt = Object.entries(entry.vol||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${seriesFmt(v)}`).join(' · ')||'—';
-
-    const rows=(entry.items||[]).map(it=>{
-      const did=it.repsTot!=null;
-      const detailed=Array.isArray(it.setReps)&&it.setReps.length>0&&!it.legacyAggregate;
-      const repsEditor=detailed
-        ? `<div class="row">${it.setReps.map((r,i)=>`<input style="margin:0;min-width:64px" aria-label="Série ${i+1}" type="number" min="1" step="1" value="${r}" id="ed_set_${entry.id}_${it.sid}_${i}">`).join('')}</div>`
-        : `<input style="margin:0" type="number" min="1" step="1" placeholder="reps agrégées" value="${did?it.repsTot:''}" id="ed_reps_${entry.id}_${it.sid}">`;
-      const right=did
-        ? (it.unit==='reps'
-            ? `${it.repsTot} reps`
-            : `${it.repsTot} reps · ${it.load??'—'} ${it.unit||'kg'} · ${it.eff?effLabel(it.eff):''}`)
-        : `<span class="muted">non renseigné</span>`;
-      return `<tr>
-        <td style="width:40%">${escapeHtml(it.name)}<div class="small muted">${escapeHtml(it.muscle||'')}</div></td>
-        <td>${right}</td>
-        <td style="width:220px">${repsEditor}</td>
-        <td style="width:160px"><input style="margin:0" type="number" placeholder="charge" value="${it.load??''}" id="ed_load_${entry.id}_${it.sid}"></td>
-      </tr>`;
-    }).join('');
-
-    return `<details style="margin-top:10px">
-      <summary>${title} <span class="muted">• ${escapeHtml(volTxt)}</span></summary>
-      <div class="small muted" style="margin-top:6px">${modeLabel}</div>
-      <div class="small" style="margin-top:4px">Modifie reps/charge puis “Enregistrer”.</div>
-      <div style="overflow:auto"><table><thead><tr><th>Exercice</th><th>Résultat</th><th>Reps</th><th>Charge</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn" type="button" onclick="saveEdit('${entry.id}')">Enregistrer</button>
-        <button class="btn ghost" type="button" onclick="deleteEntry('${entry.id}')">Supprimer</button>
-      </div>
-    </details>`;
-  }).join('');
+let progressView='exercise',selectedExercise='',exercisePeriod='90',exerciseMetric='load';
+let historyFilters={program:'all',period:'all',status:'all'},historyPage=1,openHistoryId='',historyReturnFocus='';
+function setProgressView(view){
+  progressView=view;
+  for(const name of ['Exercise','History','Activity']){document.getElementById(`progress${name}`).hidden=view!==name.toLowerCase();document.getElementById(`progress${name}Tab`).classList.toggle('on',view===name.toLowerCase());}
+  if(view==='exercise')renderExercisePicker();else if(view==='history')renderHistory();else renderActivity();
 }
-
+function renderStats(){setProgressView(progressView);}
+function renderExercisePicker(){
+  const variants=HFCore.exerciseVariants(getLog()),query=(document.getElementById('exerciseSearch')?.value||'').trim().toLocaleLowerCase('fr');
+  const visible=variants.filter(v=>v.name.toLocaleLowerCase('fr').includes(query));
+  if(!variants.length){document.getElementById('exerciseSelect').innerHTML='';document.getElementById('exerciseProgress').innerHTML='<div class="panel emptyState"><b>Tes progrès apparaîtront ici après ta première séance</b><br><button class="btn" type="button" onclick="goHome()">Voir les séances</button></div>';return;}
+  if(!selectedExercise||!variants.some(v=>v.key===selectedExercise))selectedExercise=variants[0].key;
+  const select=document.getElementById('exerciseSelect');select.innerHTML=visible.map(v=>`<option value="${escapeHtml(v.key)}" ${v.key===selectedExercise?'selected':''}>${escapeHtml(v.name)} — ${escapeHtml(v.unit)}</option>`).join('');
+  if(!visible.length){document.getElementById('exerciseProgress').innerHTML='<div class="panel emptyState">Aucun exercice ne correspond à cette recherche.</div>';return;}
+  if(!visible.some(v=>v.key===selectedExercise))selectedExercise=visible[0].key;
+  select.value=selectedExercise;renderExerciseProgress();
+}
+function selectExercise(key){selectedExercise=key;renderExerciseProgress();}
+function setExercisePeriod(value){exercisePeriod=value;renderExerciseProgress();}
+function setExerciseMetric(value){exerciseMetric=value;renderExerciseProgress();}
+function resultDetail(r){
+  const it=r.item,sets=Array.isArray(it.setReps)&&!it.legacyAggregate?it.setReps.map((x,i)=>`S${i+1}: ${x==null?'—':x}`).join(' · '):'Détail des séries indisponible';
+  return `${sets} · ${r.sets} série${r.sets>1?'s':''} réalisée${r.sets>1?'s':''} · effort ${it.eff?effLabel(it.eff):'non déclaré'}`;
+}
+function renderExerciseProgress(){
+  const variant=HFCore.exerciseVariants(getLog()).find(v=>v.key===selectedExercise),host=document.getElementById('exerciseProgress');if(!variant)return;
+  const results=HFCore.exerciseResults(getLog(),selectedExercise,{period:exercisePeriod});
+  if(!results.length){host.innerHTML=`<div class="panel emptyState"><b>Aucun résultat sur cette période.</b><br>${exercisePeriod==='all'?'':'<button class="btn ghost" type="button" onclick="setExercisePeriod(\'all\');document.getElementById(\'exercisePeriod\').value=\'all\'">Élargir à Tout</button>'}</div>`;return;}
+  const canLoad=variant.kind!=='bodyweight'&&results.some(r=>r.load!=null);if(!canLoad)exerciseMetric='reps';
+  const label=variant.kind==='assistance'?'Assistance utilisée':'Charge utilisée',last=results.at(-1),value=exerciseMetric==='reps'?last.reps:last.load;
+  const values=results.map(r=>exerciseMetric==='reps'?r.reps:r.load),unit=exerciseMetric==='reps'?'répétitions':variant.unit;
+  host.innerHTML=`<div class="panel progressHero"><div class="eyebrow">${escapeHtml(variant.unit)}</div><h2>${escapeHtml(variant.name)}</h2><div class="small">Dernier résultat dans la période · ${new Date(last.ts).toLocaleDateString('fr-FR')} · ${value??'charge non renseignée'} ${value==null?'':escapeHtml(unit)}</div><div class="small muted">${escapeHtml(resultDetail(last))} · ${programLabel(last.programMode)} • séance ${escapeHtml(last.letter)}</div>${variant.kind==='assistance'?'<p class="small">Une assistance plus basse représente moins d’aide.</p>':''}</div>
+  <div class="metricSwitch" role="group" aria-label="Mesure du graphique">${canLoad?`<button class="sbtn ${exerciseMetric==='load'?'on':''}" onclick="setExerciseMetric('load')">${label}</button>`:''}<button class="sbtn ${exerciseMetric==='reps'?'on':''}" onclick="setExerciseMetric('reps')">Répétitions totales</button></div>
+  <div class="panel chartWrap"><div class="small"><b>${exerciseMetric==='reps'?'Répétitions totales':label}</b> · ${escapeHtml(unit)} · ${exercisePeriod==='all'?'Toute la période':exercisePeriod+' jours'}</div>${progressSvg(results,values,unit)}${results.length===1?'<div class="small muted">D’autres séances sont nécessaires pour observer une évolution.</div>':''}${exerciseMetric==='reps'?'<div class="small muted">Le total dépend du nombre de séries, visible ci-dessous.</div>':''}</div>
+  <div class="resultList">${results.slice().reverse().map(r=>`<article class="resultCard"><b>${new Date(r.ts).toLocaleString('fr-FR')}</b> · <span class="statusText">${r.status==='complete'?'Complet':'Partiel'}</span><div>${exerciseMetric==='reps'?r.reps:`${r.load==null?'Charge non renseignée':r.load+' '+escapeHtml(variant.unit)}`}</div><div class="small muted">${escapeHtml(resultDetail(r))}</div><div class="small">${programLabel(r.programMode)} • séance ${escapeHtml(r.letter)}</div><button class="btn ghost" onclick="openHistoryDetail('${escapeHtml(r.sessionId)}','exercise')">Voir la séance</button></article>`).join('')}</div>`;
+}
+function progressSvg(results,values,unit){
+  const valid=values.map((v,i)=>Number.isFinite(v)?{v,i}:null).filter(Boolean);if(!valid.length)return '<div class="emptyState">Aucune valeur de charge valide pour cette mesure.</div>';
+  const min=Math.min(...valid.map(x=>x.v)),max=Math.max(...valid.map(x=>x.v)),span=max-min||1,w=640,h=230,x=i=>48+(results.length===1?272:i/(results.length-1)*570),y=v=>185-(v-min)/span*135;
+  const segments=[];let path='';values.forEach((v,i)=>{if(!Number.isFinite(v)){if(path)segments.push(path);path='';return;}path+=(path?' L':'M')+` ${x(i)} ${y(v)}`;});if(path)segments.push(path);
+  return `<svg class="progressChart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Journal de ${escapeHtml(unit)}"><line x1="48" y1="185" x2="618" y2="185" stroke="currentColor" opacity=".35"/><text x="6" y="55" fill="currentColor" font-size="12">${max} ${escapeHtml(unit)}</text><text x="6" y="188" fill="currentColor" font-size="12">${min}</text>${segments.filter(()=>valid.length>1).map(d=>`<path d="${d}" fill="none" stroke="var(--g)" stroke-width="3"/>`).join('')}${valid.map(({v,i})=>`<circle class="chartPoint" tabindex="0" cx="${x(i)}" cy="${y(v)}" r="6" fill="var(--g)"><title>${new Date(results[i].ts).toLocaleDateString('fr-FR')} : ${v} ${escapeHtml(unit)}, ${results[i].sets} séries, ${results[i].status==='complete'?'complet':'partiel'}</title></circle>`).join('')}<text x="48" y="215" fill="currentColor" font-size="12">${new Date(results[0].ts).toLocaleDateString('fr-FR')}</text><text x="535" y="215" fill="currentColor" font-size="12">${new Date(results.at(-1).ts).toLocaleDateString('fr-FR')}</text></svg>`;
+}
+function applyHistoryFilters(){historyFilters={program:document.getElementById('historyProgram').value,period:document.getElementById('historyPeriod').value,status:document.getElementById('historyStatus').value};historyPage=1;openHistoryId='';renderHistory();}
+function showMoreHistory(){historyPage++;renderHistory();}
+function renderHistory(){
+  if(openHistoryId){renderHistoryDetail(openHistoryId);return;}const all=getLog(),filtered=HFCore.filterSessions(all,historyFilters),page=HFCore.paginate(filtered,historyPage,12),host=document.getElementById('hist');
+  for(const [k,v] of Object.entries(historyFilters)){const el=document.getElementById('history'+k[0].toUpperCase()+k.slice(1));if(el)el.value=v;}
+  if(!all.length)host.innerHTML='<div class="panel emptyState"><b>Aucun historique</b><br><button class="btn" onclick="goHome()">Commencer une séance</button></div>';
+  else if(!filtered.length)host.innerHTML='<div class="panel emptyState"><b>Aucune séance pour ces filtres</b><br><button class="btn ghost" onclick="resetHistoryFilters()">Réinitialiser les filtres</button></div>';
+  else host.innerHTML=`<div class="historyList">${page.items.map(e=>{const sum=HFCore.sessionSummary(e);return `<article class="historyCard" id="history-${escapeHtml(e.id)}"><b>${new Date(e.ts).toLocaleString('fr-FR')}</b><div>${programLabel(e.programMode)} • Séance ${escapeHtml(e.letter)} • <span class="statusText">${sum.status==='partial'?'Partielle':'Complète'}</span></div><div class="small muted">${sum.performed} série${sum.performed>1?'s':''} réalisée${sum.performed>1?'s':''} · ${sum.completed} exercice${sum.completed>1?'s':''} complet${sum.completed>1?'s':''}</div><button class="btn ghost" onclick="openHistoryDetail('${escapeHtml(e.id)}','history')">Voir le détail</button></article>`}).join('')}</div>`;
+  const more=document.getElementById('historyMore');more.hidden=!page.hasMore;more.textContent=`Afficher plus (${page.shown}/${page.total})`;
+}
+function resetHistoryFilters(){historyFilters={program:'all',period:'all',status:'all'};historyPage=1;renderHistory();}
+function openHistoryDetail(id,origin='history'){progressView='history';openHistoryId=id;historyReturnFocus=origin;setProgressView('history');}
+function closeHistoryDetail(){openHistoryId='';renderHistory();requestAnimationFrame(()=>document.getElementById('historyProgram')?.focus());}
+function renderHistoryDetail(id){
+  const e=getLog().find(x=>x.id===id),host=document.getElementById('hist');document.getElementById('historyMore').hidden=true;if(!e){openHistoryId='';renderHistory();return;}
+  const sum=HFCore.sessionSummary(e);host.innerHTML=`<article class="panel sessionDetail"><button class="btn ghost" onclick="closeHistoryDetail()">← Retour à la liste</button><h2>${programLabel(e.programMode)} • Séance ${escapeHtml(e.letter)}</h2><div>${new Date(e.ts).toLocaleString('fr-FR')} · <span class="statusText">${sum.status==='partial'?'Partielle':'Complète'}</span></div><table><thead><tr><th>Exercice</th><th>Résultat enregistré</th><th>Correction</th></tr></thead><tbody>${(e.items||[]).map((it,n)=>{const detailed=Array.isArray(it.setReps)&&!it.legacyAggregate;return `<tr><td><b>${escapeHtml(it.name)}</b><div class="small">${escapeHtml(it.unit||'reps')}</div></td><td>${it.repsTot??'Non renseigné'} reps${it.load!=null?' · '+it.load+' '+escapeHtml(it.unit):''}<div class="small muted">${detailed?it.setReps.map((r,i)=>`S${i+1}: ${r??'—'}`).join(' · '):'Détail des séries indisponible'} · effort ${it.eff?effLabel(it.eff):'non déclaré'}</div></td><td>${detailed?it.setReps.map((r,i)=>`<input aria-label="${escapeHtml(it.name)}, série ${i+1}" id="ed_set_${id}_${n}_${i}" type="number" min="1" value="${r??''}" placeholder="—">`).join(''):`<input aria-label="Répétitions agrégées" id="ed_reps_${id}_${n}" type="number" min="1" value="${it.repsTot??''}">`}${it.unit!=='reps'?`<input aria-label="Charge ${escapeHtml(it.name)}" id="ed_load_${id}_${n}" type="number" min="0" step="any" value="${it.load??''}" placeholder="Charge">`:''}</td></tr>`}).join('')}</tbody></table><button class="btn" onclick="saveEdit('${escapeHtml(id)}')">Enregistrer les corrections</button><div class="dangerZone"><div class="small muted">Zone de suppression</div><button class="btn ghost" onclick="deleteEntry('${escapeHtml(id)}')">Supprimer cette séance</button></div></article>`;
+}
 function saveEdit(entryId){
-  const log=getLog();
-  const idx=log.findIndex(x=>x.id===entryId);
-  if(idx<0) return;
-  const entry=log[idx];
-  const items=[];
-  for(const it of (entry.items||[])){
-    const repsField=document.getElementById(`ed_reps_${entryId}_${it.sid}`), loadField=document.getElementById(`ed_load_${entryId}_${it.sid}`);
-    const detailed=Array.isArray(it.setReps)&&it.setReps.length>0&&!it.legacyAggregate;
-    const setFields=detailed?it.setReps.map((_,i)=>document.getElementById(`ed_set_${entryId}_${it.sid}_${i}`)):[];
-    const setChecks=setFields.map(field=>HFCore.validateReps(field?.value,{allowEmpty:true}));
-    const repsCheck=detailed?{ok:setChecks.every(x=>x.ok),value:null,error:setChecks.find(x=>!x.ok)?.error}:HFCore.validateReps(repsField?.value,{allowEmpty:true});
-    const loadCheck=(it.unit==='reps'||loadField?.value==='')?{ok:true,value:it.unit==='reps'?null:(it.load??null)}:HFCore.validateLoad(loadField.value,HFCore.chargeKind(it.unit));
-    if(!repsCheck.ok||!loadCheck.ok){ toast(repsCheck.error||loadCheck.error); (repsCheck.ok?loadField:(setFields[setChecks.findIndex(x=>!x.ok)]||repsField))?.setAttribute('aria-invalid','true'); return; }
-    try{items.push(HFCore.editHistoryItem(it,{load:loadCheck.value,...(detailed?{setReps:setChecks.map(x=>x.value).filter(x=>x!=null)}:{repsTot:repsCheck.value})}));}
-    catch(error){toast(error.message);return;}
-  }
-  const vol=computeVolume(items);
-  const total=Object.values(vol).reduce((a,b)=>a+b,0);
-  log[idx]={...entry, items, vol, total};
-  setLog(log);
-  rebuildDerivedStateFromLog();
-  toast('Historique mis à jour.');
-  renderStats();
+  const entry=getLog().find(x=>x.id===entryId);if(!entry)return;const items=[];
+  for(let n=0;n<entry.items.length;n++){const it=entry.items[n],detailed=Array.isArray(it.setReps)&&!it.legacyAggregate;const loadField=document.getElementById(`ed_load_${entryId}_${n}`);const loadCheck=it.unit==='reps'||!loadField||loadField.value===''?{ok:true,value:it.load??null}:HFCore.validateLoad(loadField.value,HFCore.chargeKind(it.unit),{allowEmpty:true});if(!loadCheck.ok){toast(loadCheck.error);loadField.focus();return;}try{if(detailed){const checks=it.setReps.map((_,i)=>HFCore.validateReps(document.getElementById(`ed_set_${entryId}_${n}_${i}`).value,{allowEmpty:true}));if(checks.some(x=>!x.ok))throw Error(checks.find(x=>!x.ok).error);items.push(HFCore.editHistoryItem(it,{load:loadCheck.value,setReps:checks.map(x=>x.value)}));}else{const check=HFCore.validateReps(document.getElementById(`ed_reps_${entryId}_${n}`).value,{allowEmpty:true});if(!check.ok)throw Error(check.error);items.push(HFCore.editHistoryItem(it,{load:loadCheck.value,repsTot:check.value}));}}catch(error){toast(error.message);return;}}
+  const vol=computeVolume(items),next={...entry,items,vol,total:Object.values(vol).reduce((a,b)=>a+b,0)},result=HFCore.replaceSession(localStorage,entryId,next);if(!result.ok){toast(`Échec de la correction : ${result.error.message}`);return;}rebuildDerivedStateFromLog();toast('Historique mis à jour.');renderHistoryDetail(entryId);
 }
 function deleteEntry(entryId){
-  setLog(getLog().filter(x=>x.id!==entryId));
-  rebuildDerivedStateFromLog();
-  toast('Séance supprimée.');
-  renderStats();
+  const entry=getLog().find(x=>x.id===entryId);if(!entry)return;if(!confirm(`Supprimer la séance ${programLabel(entry.programMode)} ${entry.letter} du ${new Date(entry.ts).toLocaleString('fr-FR')} ?`))return;const result=HFCore.removeSession(localStorage,entryId);if(!result.ok){toast(`Échec de la suppression : ${result.error.message}`);return;}rebuildDerivedStateFromLog();openHistoryId='';toast('Séance supprimée.');renderHistory();
+}
+function renderActivity(){
+  const log=HFCore.sortedSessions(getLog()),now=new Date(),ws=startOfWeek(now),we=endOfWeek(now);document.getElementById('weekRange').textContent=`${fmtDate(ws)} → ${fmtDate(we)}`;const weekly={};for(const e of log)if(e.ts>=ws&&e.ts<=we)for(const [k,v] of Object.entries(e.vol||{}))weekly[k]=(weekly[k]||0)+v;document.getElementById('weekVol').innerHTML=Object.keys(weekly).length?`<div class="resultList">${Object.entries(weekly).map(([k,v])=>`<div class="resultCard"><b>${escapeHtml(k)}</b> · ${seriesFmt(v)} séries</div>`).join('')}</div>`:'<div class="emptyState">Aucune activité enregistrée cette semaine.</div>';document.getElementById('trend').innerHTML=`<div class="rvMeta">${log.length} séance${log.length>1?'s':''} enregistrée${log.length>1?'s':''} au total. Consultation descriptive uniquement.</div>`;
 }
 
 // ============================
@@ -4607,7 +4539,7 @@ function openDone(){
   toggleFocus(false);document.getElementById('done').classList.add('on');
 }
 function openDoneDetail(){
-  document.getElementById('done').classList.remove('on');rtState.doneSets={};rtPersist();clearActiveSess();current=null;openStats();
+  const id=lastSavedEntry?.id;document.getElementById('done').classList.remove('on');rtState.doneSets={};rtPersist();clearActiveSess();current=null;openStats();if(id)openHistoryDetail(id,'done');
 }
 function closeDone(){
   document.getElementById('done').classList.remove('on');

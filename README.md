@@ -9,3 +9,7 @@ npm test
 
 Le schéma de sauvegarde et le rapport de fiabilisation sont documentés dans
 [`docs/fiabilisation-hero-farm.md`](docs/fiabilisation-hero-farm.md).
+
+## Documentation fonctionnelle
+
+- [Progrès et historique](docs/progres-historique.md)

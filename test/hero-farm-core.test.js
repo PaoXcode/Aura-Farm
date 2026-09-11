@@ -251,3 +251,51 @@ test('réouverture et double validation conservent un seul identifiant',()=>{
   assert.equal(core.commitSession(s,saved).duplicate,false);assert.equal(core.commitSession(s,saved).duplicate,true);
   assert.equal(JSON.parse(s.getItem('paogramme_log_v2')).length,1);
 });
+
+test('progrès: aucun, un puis plusieurs résultats sont déterministes',()=>{
+  assert.deepEqual(core.exerciseVariants([]),[]);
+  const one=[entry()];const key='decline_machine::unit::kg';
+  assert.equal(core.exerciseResults(one,key).length,1);
+  const many=[entry({id:'z',ts:2}),entry({id:'a',ts:2}),entry({id:'old',ts:1})];
+  assert.deepEqual(core.exerciseResults(many,key).map(x=>x.sessionId),['old','a','z']);
+});
+test('progrès: identifiant et unité empêchent toute fusion de matériel',()=>{
+  const log=[entry({items:[item({vid:'press',name:'Presse',unit:'kg'}),item({sid:'A2',vid:'press',name:'Presse',unit:'kg par haltère'}),item({sid:'A3',vid:'press-machine',name:'Presse',unit:'kg'})]})];
+  assert.equal(core.exerciseVariants(log).length,3);assert.equal(core.exerciseResults(log,'press::unit::kg').length,1);
+});
+test('progrès: charge absente, positive et vrais zéros restent fidèles',()=>{
+  const log=[entry({items:[item({load:null}),item({sid:'A2',vid:'assist',unit:'kg (assistance)',load:0}),item({sid:'A3',vid:'dip',unit:'lest (kg)',load:0})]})];
+  assert.equal(core.exerciseResults(log,'decline_machine::unit::kg')[0].load,null);
+  assert.equal(core.exerciseResults(log,'assist::unit::kg (assistance)')[0].load,0);
+  assert.equal(core.exerciseResults(log,'dip::unit::lest (kg)')[0].load,0);
+});
+test('progrès: partiel à emplacement vide et agrégat ancien sont distingués',()=>{
+  const log=[entry({items:[item({setReps:[8,null,7,null],repsTot:15}),item({sid:'A2',legacyAggregate:true,setReps:[],performedSets:3})]})];
+  const results=core.exerciseResults(log,'decline_machine::unit::kg');assert.equal(results[0].status,'partial');assert.deepEqual(results[0].item.setReps,[8,null,7,null]);
+  assert.equal(core.exerciseResults(log,'decline_machine::unit::kg').some(x=>x.legacy),true);
+});
+test('progrès: occurrences multiples le même jour ne sont ni ajoutées ni perdues',()=>{
+  const e=entry({items:[item({repsTot:10,setReps:[10]}),item({sid:'A2',repsTot:12,setReps:[12]})]});const r=core.exerciseResults([e],'decline_machine::unit::kg');assert.equal(r.length,2);assert.deepEqual(r.map(x=>x.reps),[10,12]);
+});
+test('historique: période locale inclut le début du trentième jour',()=>{
+  const now=new Date(2026,8,11,18).getTime(),start=core.periodStart('30',now);assert.equal(new Date(start).getHours(),0);
+  const log=[entry({id:'boundary',ts:start}),entry({id:'before',ts:start-1})];assert.deepEqual(core.filterSessions(log,{period:'30',now}).map(x=>x.id),['boundary']);
+});
+test('historique: programmes et statuts se filtrent sans confondre les séances A',()=>{
+  const log=[entry({id:'s'}),entry({id:'h',programMode:'hybrid',partial:true})];assert.deepEqual(core.filterSessions(log,{program:'hybrid',status:'partial'}).map(x=>x.id),['h']);
+});
+test('historique: plusieurs centaines de séances restent accessibles par pagination',()=>{
+  const log=Array.from({length:350},(_,i)=>entry({id:`s-${i}`,ts:i}));const p1=core.paginate(core.filterSessions(log),1,12),all=core.paginate(core.filterSessions(log),30,12);assert.equal(p1.items.length,12);assert.equal(p1.hasMore,true);assert.equal(all.items.length,350);
+});
+test('correction atomique actualise la bonne séance et conserve les séries',()=>{
+  const original=entry(),s=new MemoryStorage({paogramme_log_v2:JSON.stringify([original])}),changed={...original,items:[core.editHistoryItem(original.items[0],{load:62})]};const r=core.replaceSession(s,original.id,changed);assert.equal(r.ok,true);assert.deepEqual(JSON.parse(s.getItem('paogramme_log_v2'))[0].items[0].setReps,[6,6,6,6]);assert.equal(core.exerciseResults(r.log,'decline_machine::unit::kg')[0].load,62);
+});
+test('suppression retire seulement la séance visée',()=>{
+  const s=new MemoryStorage({paogramme_log_v2:JSON.stringify([entry(),entry({id:'keep',ts:2})])});const r=core.removeSession(s,'session-1');assert.equal(r.ok,true);assert.deepEqual(r.log.map(x=>x.id),['keep']);
+});
+test('échec d’écriture: correction et suppression ne produisent aucune mutation logique',()=>{
+  for(const operation of [s=>core.replaceSession(s,'session-1',entry({ts:2})),s=>core.removeSession(s,'session-1')]){const before=JSON.stringify([entry()]),s=new MemoryStorage({paogramme_log_v2:before},1),r=operation(s);assert.equal(r.ok,false);assert.equal(s.getItem('paogramme_log_v2'),before);}
+});
+test('consultation et filtres ne mutent ni journal ni brouillon',()=>{
+  const log=[entry()],before=JSON.stringify(log),draft={items:[item()]};core.exerciseVariants(log);core.exerciseResults(log,'decline_machine::unit::kg');core.filterSessions(log,{program:'strength'});core.paginate(log);assert.equal(JSON.stringify(log),before);assert.deepEqual(draft,{items:[item()]});
+});

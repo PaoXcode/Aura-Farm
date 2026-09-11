@@ -1,5 +1,9 @@
 {
   "name": "hero-farm-static",
   "private": true,
-  "scripts": { "test": "node --test" }
+  "scripts": {
+    "test": "node --test",
+    "test:browser": "node scripts/recette-browser.mjs",
+    "fixtures:browser": "node scripts/export-recette-fixtures.mjs"
+  }
 }

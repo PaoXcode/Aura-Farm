@@ -77,10 +77,10 @@
     if(item.unit!=null&&!['kg','kg par haltère','kg (assistance)','lest (kg)','reps'].includes(item.unit)) throw new Error(`${where} : unité invalide`);
     for(const name of ['sets','lo','hi']) if(item[name]!=null&&(!Number.isInteger(item[name])||item[name]<0)) throw new Error(`${where} : ${name} invalide`);
     if(!finiteOrNull(item.load)||item.load<0) throw new Error(`${where} : charge invalide`);
-    if(!finiteOrNull(item.repsTot)||item.repsTot<0||!Number.isInteger(item.repsTot)) throw new Error(`${where} : total de répétitions invalide`);
+    if(!finiteOrNull(item.repsTot)||(item.repsTot!=null&&(item.repsTot<0||!Number.isInteger(item.repsTot)))) throw new Error(`${where} : total de répétitions invalide`);
     if(item.setReps!=null){
       if(!Array.isArray(item.setReps)||item.setReps.some(r=>r!=null&&(!Number.isInteger(r)||r<=0))) throw new Error(`${where} : séries invalides`);
-      if(item.repsTot!=null&&item.setReps.reduce((a,b)=>a+(Number.isInteger(b)?b:0),0)!==item.repsTot) throw new Error(`${where} : total incohérent avec les séries`);
+      if(item.repsTot!=null&&!item.legacyAggregate&&item.setReps.reduce((a,b)=>a+(Number.isInteger(b)?b:0),0)!==item.repsTot) throw new Error(`${where} : total incohérent avec les séries`);
     }
     if(item.eff!=null&&!['EASY','OK','HARD'].includes(item.eff)) throw new Error(`${where} : effort invalide`);
   }

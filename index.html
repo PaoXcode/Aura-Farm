@@ -1121,6 +1121,18 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
   .panel, .card, .exo{ border-radius:22px !important; }
 }
 
+/* Étape 4 — vue guidée et bilan */
+.focus{align-items:flex-start;overflow:auto;padding:max(12px,env(safe-area-inset-top)) 12px calc(110px + env(safe-area-inset-bottom))}
+.focusBox{margin:auto;max-width:680px}.guidedTopActions,.guidedActions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.guidedSection{padding:16px 0;border-top:1px solid var(--v3-line,rgba(255,213,106,.18))}.guidedSection:first-child{border-top:0}
+.guidedLabel{display:block;font-weight:850;margin-bottom:7px}.guidedLoad{max-width:300px}.guidedError{min-height:1.35em;color:#ffaaa3;margin-top:6px;font-weight:750}
+.setRow{display:grid;grid-template-columns:minmax(84px,1fr) minmax(88px,130px) auto;gap:10px;align-items:center;padding:8px 0}
+.setRow input{margin:0}.setState{font-size:12px;color:var(--v3-muted)}.setRow.active{border-left:3px solid var(--g);padding-left:10px}.setRow.active .setState{color:var(--g2);font-weight:850}
+.guidedEffort .sbtn.on{background:linear-gradient(135deg,var(--g),var(--g2));color:#17120a;border-color:transparent;font-weight:950}
+.guidedResult{padding:12px;border-radius:14px;background:rgba(212,175,55,.10);white-space:pre-line}.sessionSummary{text-align:left}.summaryMark{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--g),var(--g2));color:#17120a;font-size:25px;font-weight:950}.sessionSummary h2{margin:10px 0 4px}.summaryMeta{color:var(--v3-muted)}.summaryCounts{display:grid;gap:8px;margin:18px 0}.summaryCount{padding:12px;border:1px solid var(--v3-line,rgba(255,213,106,.18));border-radius:14px}
+@media(max-width:390px){.focusBox{padding:15px;border-radius:22px}.setRow{grid-template-columns:1fr 92px}.setState{grid-column:1/-1}.guidedActions .btn{width:100%}}
+body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guidedEffort .sbtn.on{color:#17120a}
+
 </style>
 </head>
 <body>
@@ -1170,7 +1182,7 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
       </div>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Menu</button>
-        <button class="btn ghost" type="button" id="focusBtn">🎯🧭 Focus séance</button>
+        <button class="btn ghost" type="button" id="focusBtn">Vue guidée</button>
         <button class="btn" type="button" id="btnDone">Terminer • Enregistrer dans l’historique</button>
       </div>
     </div>
@@ -1330,11 +1342,11 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
       <div style="display:flex;gap:12px;align-items:center">
         <div class="boxI">🎯</div>
         <div>
-          <div class="boxT" id="fTitle">🎯🧭 Focus séance</div>
+          <div class="boxT" id="fTitle">Vue guidée</div>
           <div class="small" id="fSub">—</div>
         </div>
       </div>
-      <button class="btn" type="button" onclick="toggleFocus(false)">Quitter le focus</button>
+      <button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button>
     </div>
     <div id="fBody" style="margin-top:12px"></div>
   </div>
@@ -1429,12 +1441,16 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
   </div>
 </div>
 
-<div class="overlay" id="done">
-  <div class="box" style="text-align:center;padding:22px">
-    <div style="font-weight:950;font-size:20px;background:linear-gradient(90deg,var(--g2),var(--g));-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.02em">Séance enregistrée dans l’historique.</div>
-    <div class="boxP" style="margin-top:8px">Tu peux retrouver cette séance dans <b>Stats</b>.</div>
-    <div class="boxA" style="justify-content:center">
-      <button class="btn" type="button" onclick="closeDone()">Retour</button>
+<div class="overlay" id="done" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+  <div class="box sessionSummary">
+    <div class="summaryMark" aria-hidden="true">✓</div>
+    <div class="eyebrow">Historique mis à jour</div>
+    <h2 id="doneTitle">Séance enregistrée</h2>
+    <div id="doneMeta" class="summaryMeta"></div>
+    <div id="doneCounts" class="summaryCounts"></div>
+    <div class="boxA">
+      <button class="btn" type="button" onclick="closeDone()">Retour à l’accueil</button>
+      <button class="btn ghost" type="button" onclick="openDoneDetail()">Voir le détail</button>
     </div>
   </div>
 </div>
@@ -2114,7 +2130,7 @@ function rtFinish(opts={}){
   rtMarkDone();
   if(completedSid && nextInputSet){
     focusPendingSet = {sid: completedSid, set: nextInputSet};
-    if(focusOn) renderFocus({focusSet: nextInputSet});
+    // Ne reconstruit pas la vue : le clavier et le champ actif restent intacts.
   }
   if(!silent && rtGetSound()) rtBoxingBell();
   toast(reason ? `Repos terminé ${reason}.` : 'Repos terminé.');
@@ -2464,6 +2480,9 @@ function getSetRepsArray(sid, sets){
     if(Number.isFinite(v) && v>0) out.push(v);
   }
   return out;
+}
+function getSetRepsSlots(sid, sets){
+  return HFCore.normalizeSetSlots(Array.from({length:sets},(_,i)=>document.getElementById(`setreps_${sid}_${i+1}`)?.value),sets);
 }
 function analyzeSetDistribution(setReps){
   const arr=(setReps||[]).map(Number).filter(v=>Number.isFinite(v) && v>0);
@@ -3139,13 +3158,24 @@ function openSwapConfirm(sid, vid){
   document.getElementById('swapConfirm').classList.add('on');
 }
 function applySwap(sid, vid){
+  const sd=getSlotDefBySid(sid),old=sd&&variantMeta(sd,getVariantForSlot(sd.sid,sd.defaultVid)),next=sd&&variantMeta(sd,vid);
   if(current?.L){
     try{ saveDraft(current.L, buildSessionSnapshot(current.L)); }catch{}
   }
   setVariantForSlot(sid, vid);
   delete exoValidated[sid];
   toast('Variante changée. Historique conservé par exercice choisi.');
-  if(current?.L) renderSession(current.L, {keepInputs:true});
+  if(current?.L){
+    renderSession(current.L, {keepInputs:true});
+    // Une variante possède ses propres données : aucune charge/série n’est réattribuée.
+    if(!HFCore.comparableUnit(old?.unit,next?.unit)||old?.vid!==next?.vid){
+      const load=document.getElementById('load_'+sid);if(load)load.value='';
+      const slot=getSlotDefBySid(sid);for(let i=1;i<=(slot?.sets||0);i++){const x=document.getElementById(`setreps_${sid}_${i}`);if(x)x.value='';}
+      syncSetRepsTotal(sid,slot?.sets||0);
+      toast('Variante changée : saisies effacées, sans conversion de charge.');
+    }
+    if(focusOn){focusPickSid=sid;renderFocus();}
+  }
   closeSwap();
 }
 function confirmSwapValidate(){
@@ -3240,7 +3270,7 @@ function exoCard(L, slotDef){
     ${unit==='reps' ? `` : `
     <label>Charge utilisée aujourd’hui (${unit}) <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_load_${slotDef.sid}')">Aide charge</button>
       <div class="helpText" id="help_load_${slotDef.sid}">${chargeHelp(unit)}</div>
-      <input id="load_${slotDef.sid}" type="number" min="0" step="any" value="${Number.isFinite(planLoad)?planLoad:''}" inputmode="decimal"/>
+      <input id="load_${slotDef.sid}" type="number" min="0" step="any" value="" inputmode="decimal"/>
       ${loadHint ? `<div class="small loadHint">${escapeHtml(loadHint)}</div>` : ``}
     </label>`}
 
@@ -3507,100 +3537,55 @@ function toggleFocus(on){
 }
 
 
-function renderFocus(opts={}){
-  if(!current?.L) return;
-  const S=getActiveProgram()[current.L];
-
-  const actives = S.slots.filter(x=>!x.note);
-  const totalAct = actives.length || 1;
-
-  let next = actives[0] || S.slots[0];
-
-  // ✅ Focus EXO : verrouille l’exercice choisi. Focus SÉANCE : on suit la progression normale.
-  if(!focusSeance && focusPickSid){
-    const pick = S.slots.find(x=>x.sid===focusPickSid);
-    if(pick) next = pick;
-  }
-
-  // Focus SÉANCE : on prend le prochain exercice dont toutes les séries ne sont pas renseignées.
-  // Le total de reps peut être > 0 après une seule série : ça ne suffit pas à terminer l'exercice.
-  if(focusSeance){
-    let todo = null;
-    for(const sd of actives){
-      if(!areExerciseSetsComplete(sd.sid, sd.sets)){ todo = sd; break; }
-    }
-    if(todo) next = todo;
-    else next = actives[actives.length-1] || next;
-  }
-  const vid=getVariantForSlot(next.sid,next.defaultVid);
-  const v=variantMeta(next,vid);
-  const last=getLast(v.vid,next.baseLoad);
-  const unit=v.unit||'kg';
-
-  const targetRPS=Number.isFinite(last.nextRepsPerSet)?clampInt(last.nextRepsPerSet,next.lo,next.hi):next.lo;
-  const planLoad = Number.isFinite(last.nextLoad) ? last.nextLoad : suggestedStartLoad(next, v, targetRPS);
-
-  const refLine = last.performedTs
-    ? (unit==='reps'
-        ? `${last.performedTotalReps||'—'} reps · ${effLabel(last.performedEff||'OK')}`
-        : `${last.performedTotalReps||'—'} reps · ${last.performedLoad} ${unit} · ${effLabel(last.performedEff||'OK')}`)
-    : '—';
-
-  document.getElementById('fTitle').textContent = v.name;
-  const idxAct = Math.max(1, actives.findIndex(x=>x.sid===next.sid)+1);
-  const isLastFocusSeance = (focusSeance===true) && (actives[actives.length-1]?.sid===next.sid) && areAllActiveExerciseSetsComplete(actives);
-  document.getElementById('fSub').textContent = `Focus ${focusPickSid?'(sélectionné)':'(auto)'} • Exo ${idxAct}/${totalAct} • ${next.muscle} • ${next.sets}×${targetRPS} • Reps ${next.lo}–${next.hi} • repos ${next.rest}`;
-
-  const goalLine = (unit==='reps')
-    ? `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi})`
-    : `${next.sets}×${targetRPS} (Reps ${next.lo}–${next.hi})${Number.isFinite(planLoad)?` · ${planLoad} ${unit}`:' · charge à renseigner'}`;
-
-  const firstEmptySet = getFirstEmptySetNumber(next.sid, next.sets);
-  const pendingSet = (focusPendingSet?.sid === next.sid && focusPendingSet.set) ? focusPendingSet.set : null;
-  const setToFocus = opts.focusSet || pendingSet || firstEmptySet || next.sets;
-  const setInputs = Array.from({length:next.sets},(_,i)=>{
-    const setNo = i+1;
-    const cardVal = document.getElementById(`setreps_${next.sid}_${setNo}`)?.value || '';
-    const isPrompt = setNo === setToFocus;
-    return `
-      <div class="setCell" style="${isPrompt?'border-color:rgba(255,213,106,.72);background:rgba(212,175,55,.10)':''}">
-        <b>${isPrompt?'👉 ':''}Série ${setNo}</b>
-        <input id="${focusSetInputId(next.sid, setNo)}" type="number" inputmode="numeric" placeholder="${targetRPS}" value="${escapeHtml(cardVal)}" oninput="handleFocusSetRepsInput('${next.sid}', ${next.sets})" onkeydown="focusNextSetFromInput('${next.sid}', ${next.sets}, ${setNo}, event)"/>
-      </div>`;
-  }).join('');
-  const currentTotal = toNum(document.getElementById('reps_'+next.sid)?.value)||0;
-  const inputHint = firstEmptySet
-    ? `Saisis la <b>série ${firstEmptySet}</b> ici, sans quitter le focus.`
-    : `Toutes les séries sont renseignées : tu peux valider l’exercice.`;
-
-  document.getElementById('fBody').innerHTML = `
-    <div class="goal">Objectif • ${goalLine}</div>
-    <div class="small" style="margin-top:8px">Dernière (référence) : ${refLine}</div>
-
-    <div class="small" style="margin-top:12px">${inputHint}</div>
-    <label style="margin-top:10px">Reps par série (${next.sets} séries)</label>
-    <div class="setGrid">${setInputs}</div>
-    <div class="small" style="margin-top:8px">Total calculé automatiquement : <b id="f_repsTotView_${next.sid}">${currentTotal}</b> reps</div>
-
-    <button class="btn ghost" type="button" style="margin-top:10px" onclick="startRestForSid('${next.sid}')">⏱ Lancer le repos (${next.rest})</button>
-
-    <div class="seg" style="margin-top:10px">
-      <button class="sbtn" type="button" onclick="setEff('${next.sid}','EASY');toast('Effort: Facile');">😌 Facile</button>
-      <button class="sbtn" type="button" onclick="setEff('${next.sid}','OK');toast('Effort: OK');">🙂 OK</button>
-      <button class="sbtn" type="button" onclick="setEff('${next.sid}','HARD');toast('Effort: Dur');">😤 Dur</button>
-    </div>
-
-    <div class="row" style="margin-top:12px;justify-content:flex-start"><button class="btn" type="button" onclick="syncFocusToCard('${next.sid}');validate('${current.L}','${next.sid}')">Valider</button></div>
-    ${isLastFocusSeance ? `
-    <div style="margin-top:12px">
-      <button class="btn" type="button" onclick="openDone()">Terminer • Enregistrer dans l’historique</button>
-      <div class="small muted" style="margin-top:8px">Tous les exercices sont renseignés. Appuie sur “Terminer” pour l’ajouter à l’historique.</div>
-    </div>
-    ` : ``}
-
-  `;
-  focusSetInputSoon(next.sid, setToFocus);
+function syncGuidedLoad(sid){
+  const source=document.getElementById(`f_load_${sid}`),target=document.getElementById(`load_${sid}`);
+  if(source&&target) target.value=source.value;
+  if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
 }
+function guidedValidate(sid){
+  syncFocusToCard(sid); syncGuidedLoad(sid);
+  const ok=validate(current.L,sid);
+  if(!ok){
+    const source=document.getElementById(`res_${sid}`)?.textContent||'Corrige les champs indiqués.';
+    const error=document.getElementById('fError'); if(error) error.textContent=source;
+    const cardLoad=document.getElementById(`load_${sid}`);
+    if(cardLoad?.getAttribute('aria-invalid')) document.getElementById(`f_load_${sid}`)?.setAttribute('aria-invalid','true');
+  }
+}
+function guidedNext(sid){
+  syncFocusToCard(sid); syncGuidedLoad(sid);
+  const slots=getActiveProgram()[current.L].slots.filter(x=>!x.note),at=slots.findIndex(x=>x.sid===sid);
+  const ordered=[...slots.slice(at+1),...slots.slice(0,at+1)];
+  const next=ordered.find(x=>!areExerciseSetsComplete(x.sid,x.sets));
+  if(!next){toast('Tous les exercices sont renseignés. Tu peux terminer la séance.');return;}
+  focusSeance=false;focusPickSid=next.sid;focusPendingSet=null;renderFocus();
+}
+function renderFocus(opts={}){
+  if(!current?.L)return;
+  const S=getActiveProgram()[current.L],actives=S.slots.filter(x=>!x.note);
+  let next=S.slots.find(x=>x.sid===focusPickSid)||actives.find(x=>!areExerciseSetsComplete(x.sid,x.sets))||actives.at(-1)||S.slots[0];
+  if(focusSeance) next=actives.find(x=>!areExerciseSetsComplete(x.sid,x.sets))||actives.at(-1)||next;
+  const vid=getVariantForSlot(next.sid,next.defaultVid),v=variantMeta(next,vid),last=getLast(v.vid,next.baseLoad),unit=v.unit||'kg';
+  const target=Number.isFinite(last.nextRepsPerSet)?clampInt(last.nextRepsPerSet,next.lo,next.hi):next.lo;
+  const objective=Number.isFinite(last.nextLoad)?last.nextLoad:suggestedStartLoad(next,v,target);
+  const idx=Math.max(1,S.slots.findIndex(x=>x.sid===next.sid)+1),cardLoad=document.getElementById(`load_${next.sid}`)?.value||'';
+  document.getElementById('fTitle').textContent=v.name;
+  document.getElementById('fSub').textContent=`Exercice ${idx}/${S.slots.length} • ${next.muscle}`;
+  if(next.note){
+    document.getElementById('fBody').innerHTML=`<div class="guidedSection"><div class="goal">Rappel technique</div><p>${escapeHtml(next.note)}</p><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><div class="guidedActions"><button class="btn ghost" onclick="openDone()">Terminer la séance</button><button class="btn" onclick="guidedNext('${next.sid}')">Exercice suivant</button></div>`;return;
+  }
+  const first=getFirstEmptySetNumber(next.sid,next.sets),active=opts.focusSet||focusPendingSet?.sid===next.sid&&focusPendingSet.set||first;
+  const rows=Array.from({length:next.sets},(_,i)=>{const n=i+1,val=document.getElementById(`setreps_${next.sid}_${n}`)?.value||'',done=HFCore.validateReps(val,{allowEmpty:false}).ok;return `<div class="setRow ${n===active?'active':''}"><label for="${focusSetInputId(next.sid,n)}">Série ${n}</label><input id="${focusSetInputId(next.sid,n)}" aria-label="Répétitions série ${n}" type="number" min="1" step="1" inputmode="numeric" placeholder="${target}" value="${escapeHtml(val)}" oninput="handleFocusSetRepsInput('${next.sid}',${next.sets});this.parentElement.querySelector('.setState').textContent=this.value?'Renseignée':'À renseigner'" onkeydown="focusNextSetFromInput('${next.sid}',${next.sets},${n},event)"><span class="setState">${done?'✓ Renseignée':'À renseigner'}</span></div>`}).join('');
+  const ref=last.performedTs?(unit==='reps'?`${last.performedTotalReps} reps`:`${last.performedLoad} ${unit} • ${last.performedTotalReps} reps`):'Aucune référence pour cette variante.';
+  const eff=getEff(next.sid),result=document.getElementById(`res_${next.sid}`)?.textContent||'',why=document.getElementById(`why_${next.sid}`)?.innerHTML||'';
+  document.getElementById('fBody').innerHTML=`
+    <div class="guidedSection"><div class="guidedTopActions"><button class="btn ghost" onclick="toggleFocus(false)">Tous les exercices</button><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div></div>
+    <div class="guidedSection"><div class="goal">Objectif • ${next.sets}×${target}${unit!=='reps'?(Number.isFinite(objective)?` • ${objective} ${unit}`:' • Charge à renseigner'):''}</div>${unit==='reps'?'':`<label class="guidedLabel" for="f_load_${next.sid}">Charge utilisée (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="Charge à renseigner" oninput="syncGuidedLoad('${next.sid}')"><div class="small">${chargeHelp(unit)}</div>`}</div>
+    <div class="guidedSection"><h3>Séries</h3>${rows}<div class="small">Total (information) : <b id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</b> reps</div><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos • ${next.rest}</button></div>
+    <div class="guidedSection guidedEffort"><div><b>Effort ressenti</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setEff('${next.sid}','EASY');renderFocus()">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setEff('${next.sid}','OK');renderFocus()">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setEff('${next.sid}','HARD');renderFocus()">😤 Dur</button></div><div id="fError" class="guidedError" role="alert"></div><button class="btn" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>${result?`<div class="guidedResult"><b>Recommandation</b>\n${escapeHtml(result)}${why?`<details><summary>Pourquoi ?</summary>${why}</details>`:''}</div><button class="btn ghost" onclick="guidedNext('${next.sid}')">Exercice suivant</button>`:''}</div>
+    <div class="guidedSection"><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div>`;
+}
+
 function syncFocusToCard(sid){
   const sd = getSlotDefBySid(sid);
   if(sd) syncFocusSetRepsToCard(sid, sd.sets);
@@ -3813,7 +3798,7 @@ function buildSessionSnapshot(L){
     const last=getLast(v.vid, sd.baseLoad);
     const load = (unit==='reps') ? 0 : toNum(document.getElementById('load_'+sd.sid)?.value);
     const reps=toNum(document.getElementById('reps_'+sd.sid)?.value);
-    const setReps=getSetRepsArray(sd.sid, sd.sets);
+    const setReps=getSetRepsSlots(sd.sid, sd.sets);
     const setAnalysis=analyzeSetDistribution(setReps);
     const eff=getEff(sd.sid);
     const did=Number.isFinite(reps)&&reps>0;
@@ -4565,7 +4550,7 @@ function exportData(){
 const DRAFT_KEY='paogramme_session_draft_v1';
 
 function saveDraft(letter, items, programMode=getProgramMode()){
-  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({sessionId:currentSessionId||newId(),letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[],progressBaseline:sessionProgressBaselineByVid})); }catch{ toast('Brouillon non sauvegardé : stockage indisponible.'); }
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({version:2,sessionId:currentSessionId||newId(),letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[],progressBaseline:sessionProgressBaselineByVid,navigation:{view:focusOn?'guided':'overview',sid:focusPickSid||null}})); }catch{ toast('Brouillon non sauvegardé : stockage indisponible.'); }
 }
 function loadDraft(){
   try{
@@ -4582,6 +4567,7 @@ function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
 // Finish session
 // ============================
 let finishingSession=false;
+let lastSavedEntry=null;
 function openDone(){
   if(finishingSession || !current?.L) return;
   finishingSession=true;
@@ -4613,7 +4599,15 @@ function openDone(){
   finishingSession=false;
   if(!result.ok){ toast('Échec de l’enregistrement : brouillon conservé.'); return; }
   rebuildDerivedStateFromLog();
-  document.getElementById('done').classList.add('on');
+  lastSavedEntry=getLog().find(x=>x.id===entry.id)||entry;
+  const summary=HFCore.sessionSummary(lastSavedEntry),date=new Date(lastSavedEntry.ts).toLocaleDateString('fr-FR');
+  document.getElementById('doneTitle').textContent=summary.status==='partial'?'Séance partielle enregistrée':'Séance enregistrée';
+  document.getElementById('doneMeta').textContent=`${programLabel(lastSavedEntry.programMode)} • Séance ${lastSavedEntry.letter} • ${date}`;
+  document.getElementById('doneCounts').innerHTML=`<div class="summaryCount"><b>${summary.completed}</b> exercice${summary.completed>1?'s':''} entièrement renseigné${summary.completed>1?'s':''}</div>${summary.partial?`<div class="summaryCount"><b>${summary.partial}</b> exercice${summary.partial>1?'s':''} partiellement renseigné${summary.partial>1?'s':''}</div>`:''}<div class="summaryCount"><b>${summary.performed}</b> série${summary.performed>1?'s':''} réalisée${summary.performed>1?'s':''}</div>`;
+  toggleFocus(false);document.getElementById('done').classList.add('on');
+}
+function openDoneDetail(){
+  document.getElementById('done').classList.remove('on');rtState.doneSets={};rtPersist();clearActiveSess();current=null;openStats();
 }
 function closeDone(){
   document.getElementById('done').classList.remove('on');

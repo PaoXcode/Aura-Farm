@@ -220,3 +220,34 @@ test('la finalisation répétée ne crée ni historique ni brouillon',()=>{
   const s=new MemoryStorage();for(let i=0;i<2;i++)assert.equal(core.saveSetup(s,{step:3,name:'A',program:'strength'},{complete:true}).ok,true);
   assert.equal(s.getItem('paogramme_log_v2'),null);assert.equal(s.getItem('paogramme_session_draft_v1'),null);
 });
+
+test('les emplacements de séries restent stables entre vue guidée, reprise et bilan',()=>{
+  assert.deepEqual(core.normalizeSetSlots(['8','',7,null],4),[8,null,7,null]);
+  const partial=item({setReps:[8,null,7,null],repsTot:15});
+  assert.equal(core.performedSets(partial),2);
+  assert.equal(core.isCompletedExercise(partial),false);
+  assert.doesNotThrow(()=>core.validateBackup(backup({paogramme_session_draft_v1:JSON.stringify({version:2,sessionId:'guided-1',letter:'A',programMode:'strength',items:[partial]})})));
+});
+
+test('un bilan compte les vraies séries et distingue complet, partiel et vide',()=>{
+  const complete=item(), partial=item({sid:'A2',setReps:[6,null,null,null],repsTot:6}), empty=item({sid:'A3',setReps:[null,null,null,null],repsTot:null,load:null});
+  assert.deepEqual(core.sessionSummary(entry({partial:true,items:[complete,partial,empty]})),{completed:1,partial:1,performed:5,empty:false,status:'partial'});
+  assert.deepEqual(core.sessionSummary(entry({items:[complete]})),{completed:1,partial:0,performed:4,empty:false,status:'complete'});
+  assert.equal(core.sessionSummary(entry({partial:true,items:[empty]})).empty,true);
+});
+
+test('une répétition invalide ne devient jamais une série réalisée',()=>{
+  assert.deepEqual(core.normalizeSetSlots(['10','abc','-2','0'],4),[10,null,null,null]);
+  assert.equal(core.performedSets({setReps:core.normalizeSetSlots(['10','abc'],2)}),1);
+});
+
+test('corriger uniquement la charge préserve séries et effort',()=>{
+  const before=item({setReps:[10,9,8,7],repsTot:34,eff:'HARD'}),after={...before,load:62.5};
+  assert.deepEqual(after.setReps,before.setReps);assert.equal(after.eff,'HARD');assert.equal(after.load,62.5);
+});
+
+test('réouverture et double validation conservent un seul identifiant',()=>{
+  const s=new MemoryStorage({paogramme_log_v2:'[]',paogramme_session_draft_v1:'{}'}),saved=entry({id:'stable-guided'});
+  assert.equal(core.commitSession(s,saved).duplicate,false);assert.equal(core.commitSession(s,saved).duplicate,true);
+  assert.equal(JSON.parse(s.getItem('paogramme_log_v2')).length,1);
+});

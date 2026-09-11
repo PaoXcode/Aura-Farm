@@ -189,6 +189,44 @@
     const performed=items.reduce((sum,x)=>sum+performedSets(x),0);
     return {completed,partial,performed,empty:performed===0,status:entry?.partial||partial>0?'partial':'complete'};
   }
+  const DAY=86400000;
+  function periodStart(period,now=Date.now()){
+    if(period==='all') return -Infinity;
+    const days=period==='30'?30:90;
+    const d=new Date(now); d.setHours(0,0,0,0); d.setDate(d.getDate()-(days-1));
+    return d.getTime();
+  }
+  function sortedSessions(log){return (log||[]).slice().sort((a,b)=>(b?.ts||0)-(a?.ts||0)||String(a?.id||'').localeCompare(String(b?.id||'')));}
+  function filterSessions(log,{program='all',period='all',status='all',now=Date.now()}={}){
+    const start=periodStart(period,now);
+    return sortedSessions(log).filter(e=>e&&e.ts>=start&&(program==='all'||(e.programMode||'strength')===program)&&(status==='all'||sessionSummary(e).status===status));
+  }
+  function exerciseVariants(log){
+    const found=new Map();
+    for(const entry of sortedSessions(log).reverse()) for(const item of entry.items||[]){
+      if(!item?.vid||!Number.isInteger(item.repsTot)||item.repsTot<=0)continue;
+      const key=`${item.vid}::unit::${item.unit||'reps'}`;
+      if(!found.has(key))found.set(key,{key,vid:item.vid,name:item.name||item.vid,unit:item.unit||'reps',kind:chargeKind(item.unit)});
+    }
+    return [...found.values()].sort((a,b)=>a.name.localeCompare(b.name,'fr')||a.key.localeCompare(b.key));
+  }
+  function exerciseResults(log,key,{period='all',now=Date.now()}={}){
+    const [vid,unit]=String(key||'').split('::unit::'),start=periodStart(period,now),out=[];
+    for(const entry of log||[]) for(let index=0;index<(entry.items||[]).length;index++){
+      const item=entry.items[index];
+      if(entry.ts<start||item?.vid!==vid||(item.unit||'reps')!==unit||!Number.isInteger(item.repsTot)||item.repsTot<=0)continue;
+      const kind=chargeKind(unit),load=Number.isFinite(item.load)&&validateLoad(item.load,kind,{allowEmpty:true}).ok?item.load:null;
+      out.push({id:`${entry.id}:${index}`,sessionId:entry.id,itemIndex:index,ts:entry.ts,programMode:entry.programMode||'strength',letter:entry.letter,item,load,reps:item.repsTot,sets:performedSets(item),status:isCompletedExercise(item)?'complete':'partial',legacy:!!item.legacyAggregate});
+    }
+    return out.sort((a,b)=>a.ts-b.ts||a.sessionId.localeCompare(b.sessionId)||a.itemIndex-b.itemIndex);
+  }
+  function paginate(items,page=1,size=12){const take=Math.max(1,page)*Math.max(1,size);return {items:(items||[]).slice(0,take),shown:Math.min(take,(items||[]).length),total:(items||[]).length,hasMore:take<(items||[]).length};}
+  function replaceSession(storage,id,next,logKey='paogramme_log_v2'){
+    let log;try{log=JSON.parse(storage.getItem(logKey)||'[]');const index=log.findIndex(x=>x?.id===id);if(index<0)throw Error('Séance introuvable.');const updated=log.slice();updated[index]=next;validateLog(updated);storage.setItem(logKey,JSON.stringify(updated));return {ok:true,log:updated};}catch(error){return {ok:false,error};}
+  }
+  function removeSession(storage,id,logKey='paogramme_log_v2'){
+    let log;try{log=JSON.parse(storage.getItem(logKey)||'[]');if(!log.some(x=>x?.id===id))throw Error('Séance introuvable.');const updated=log.filter(x=>x?.id!==id);storage.setItem(logKey,JSON.stringify(updated));return {ok:true,log:updated};}catch(error){return {ok:false,error};}
+  }
   function editHistoryItem(item,{repsTot,load,setReps}={}){
     const next={...item}; if(!Array.isArray(item.setReps))next.legacyAggregate=true;if(load!==undefined)next.load=load;
     if(setReps!==undefined){next.setReps=setReps.slice();next.repsTot=setReps.reduce((a,b)=>a+b,0)||null;next.legacyAggregate=false;delete next.performedSets;}
@@ -231,5 +269,5 @@
       return {ok:true,setup};
     }catch(error){return {ok:false,error};}
   }
-  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,normalizeSetSlots,sessionSummary,editHistoryItem,commitSession,latestSession,mergeUniqueEntries,normalizeName,validateProfile,validateSetup,hasPriorUse,saveSetup};
+  return {BACKUP_VERSION,RECOVERY_KEY,chargeKind,comparableUnit,validateReps,validateLoad,performedSets,tonnage,progressLoad,progressLabel,suggestedStart,isAllowedKey,createBackup,migrateBackup,validateBackup,restoreBackup,inspectRecovery,recoverBackup,validateSessionItems,isCompletedExercise,normalizeSetSlots,sessionSummary,periodStart,sortedSessions,filterSessions,exerciseVariants,exerciseResults,paginate,replaceSession,removeSession,editHistoryItem,commitSession,latestSession,mergeUniqueEntries,normalizeName,validateProfile,validateSetup,hasPriorUse,saveSetup};
 });

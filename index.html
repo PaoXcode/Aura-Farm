@@ -1135,12 +1135,22 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
 .focusBox{margin:auto;max-width:680px}.guidedTopActions,.guidedActions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .guidedSection{padding:16px 0;border-top:1px solid var(--v3-line,rgba(255,213,106,.18))}.guidedSection:first-child{border-top:0}
 .guidedLabel{display:block;font-weight:850;margin-bottom:7px}.guidedLoad{max-width:300px}.guidedError{min-height:1.35em;color:#ffaaa3;margin-top:6px;font-weight:750}
-.setRow{display:grid;grid-template-columns:minmax(84px,1fr) minmax(88px,130px) auto;gap:10px;align-items:center;padding:8px 0}
-.setRow input{margin:0}.setState{font-size:12px;color:var(--v3-muted)}.setRow.active{border-left:3px solid var(--g);padding-left:10px}.setRow.active .setState{color:var(--g2);font-weight:850}
+.setRow{display:grid;grid-template-columns:minmax(84px,1fr) minmax(88px,130px) minmax(76px,auto);gap:10px;align-items:center;padding:8px 0 8px 10px;border-left:3px solid transparent}
+.setRow input{margin:0}.setState{font-size:12px;color:var(--v3-muted)}.setRow.active{border-left-color:var(--g)}.setRow.active .setState{color:var(--g2);font-weight:850}.setRow[data-state=invalid] .setState{color:#ffaaa3}.setRow[data-state=valid] .setState{color:var(--v3-muted)}
 .guidedEffort .sbtn.on{background:linear-gradient(135deg,var(--g),var(--g2));color:#17120a;border-color:transparent;font-weight:950}
 .guidedResult{padding:12px;border-radius:14px;background:rgba(212,175,55,.10);white-space:pre-line}.sessionSummary{text-align:left}.summaryMark{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--g),var(--g2));color:#17120a;font-size:25px;font-weight:950}.sessionSummary h2{margin:10px 0 4px}.summaryMeta{color:var(--v3-muted)}.summaryCounts{display:grid;gap:8px;margin:18px 0}.summaryCount{padding:12px;border:1px solid var(--v3-line,rgba(255,213,106,.18));border-radius:14px}
 @media(max-width:390px){.focusBox{padding:15px;border-radius:22px}.setRow{grid-template-columns:1fr 92px}.setState{grid-column:1/-1}.guidedActions .btn{width:100%}}
 body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guidedEffort .sbtn.on{color:#17120a}
+
+@media(max-width:600px){
+  body:not([data-view=sess]){padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+  .v3Top{position:static;padding:12px 14px 6px!important}.v3Logo{width:38px!important;height:38px!important}.v3Title{font-size:22px!important}.v3Sub{font-size:12px}.settingsFab{display:none}
+  .v3Nav{position:fixed;z-index:35;left:10px;right:10px;bottom:max(8px,env(safe-area-inset-bottom));padding:6px;border:1px solid var(--v3-stroke);border-radius:18px;background:color-mix(in srgb,var(--v3-bg) 94%,transparent);backdrop-filter:blur(18px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .v3Tab{min-height:48px;padding:8px 4px;font-size:13px;border-color:transparent}.v3Tab.on{border-color:var(--v3-goldSoft)}
+  body[data-view=sess] .v3Top{display:none}body[data-view=sess] .v3Nav,.focus.on~.v3Nav{display:none}
+  .homeHero{padding:18px}.homeHero h1{font-size:26px}.homeSummary{padding:14px!important}
+  .focus{padding:0 0 calc(154px + env(safe-area-inset-bottom));background:var(--v3-bg)}.focusBox{width:100%;max-width:none;margin:0;border:0!important;border-radius:0!important;box-shadow:none!important;padding:14px}.focusHead{position:sticky;top:0;z-index:3;background:color-mix(in srgb,var(--v3-bg) 94%,transparent);padding:10px 0}
+}
 
 
 .progressTabs{display:flex;gap:8px;margin:14px 0;position:sticky;top:0;z-index:2;padding:6px;background:color-mix(in srgb,var(--v3-bg) 88%,transparent);border-radius:16px}.progressTabs .on{border-color:var(--g);box-shadow:inset 0 0 0 1px var(--g)}
@@ -1161,16 +1171,16 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
         <div class="v3Logo">H</div>
         <div>
           <div class="v3Title">HERO FARM</div>
-          <div class="v3Sub">S’entraîner avec méthode. Progresser avec certitude.</div>
+          <div class="v3Sub">S’entraîner avec méthode. Suivre ses progrès.</div>
         </div>
       </div>
       <button class="btn ghost settingsFab" type="button" id="settingsBtn" aria-label="Ouvrir les réglages">⚙️</button>
     </div>
 
     <div class="v3Nav" role="navigation" aria-label="Navigation">
-      <button class="v3Tab on" type="button" id="sessionsBtn">Séances</button>
-      <button class="v3Tab" type="button" id="goalsBtn">Objectifs</button>
+      <button class="v3Tab on" type="button" id="sessionsBtn">Entraînement</button>
       <button class="v3Tab" type="button" id="statsBtn">Progrès</button>
+      <button class="v3Tab" type="button" id="mobileSettingsBtn">Réglages</button>
     </div>
   </div>
 </header>
@@ -1221,8 +1231,8 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
     <div class="row" style="margin-top:2px">
       <div id="hintGoals" class="small" style="display:none;margin-bottom:6px;color:rgba(255,213,106,.95)"></div>
       <div>
-        <h1 style="font-size:18px;font-weight:950;margin:0">Objectifs</h1>
-        <div class="small" style="margin-top:4px">Renseigne tes <b>RP10</b> (charge que tu peux faire sur 10 reps à l’échec). Base cohérente si un exercice n’a pas encore d’historique.</div>
+        <h1 style="font-size:18px;font-weight:950;margin:0">Charges de référence</h1>
+        <div class="small" style="margin-top:4px">Les <b>RP10</b> sont facultatifs : ils servent de point de départ lorsqu’un exercice n’a pas encore d’historique.</div>
       </div>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Retour</button>
@@ -1345,6 +1355,16 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
         <button class="btn ghost" type="button" onclick="openGuide()">Revoir le guide</button>
       </div>
       <div class="settingCard">
+        <div class="settingTitle">Programme et données</div>
+        <div class="settingDesc">Retrouve les fonctions existantes sans encombrer l’entraînement.</div>
+        <button class="btn ghost" type="button" onclick="closeSettings();openProgramPicker()">Choisir le programme</button>
+        <button class="btn ghost" type="button" onclick="closeSettings();openGoals()">Charges de référence (RP10)</button>
+        <button class="btn ghost" type="button" onclick="closeSettings();openStats();setProgressView('history')">Historique</button>
+        <button class="btn ghost" type="button" onclick="exportFullBackup()">Télécharger une sauvegarde</button>
+        <button class="btn ghost" type="button" onclick="triggerJsonRestore()">Restaurer une sauvegarde</button>
+        <button class="btn ghost" type="button" onclick="exportData()">Exporter les données</button>
+      </div>
+      <div class="settingCard">
         <div class="settingTitle">Apparence</div>
         <div class="settingDesc">Choisis un thème façon iOS. “Auto” suit le réglage clair/sombre du téléphone.</div>
         <div class="themeChoice" role="group" aria-label="Choix du thème">
@@ -1371,7 +1391,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
           <div class="small" id="fSub">—</div>
         </div>
       </div>
-      <button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button>
+      <div class="guidedTopActions"><button class="btn ghost" type="button" onclick="goHome()">Accueil</button><button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button></div>
     </div>
     <div id="fBody" style="margin-top:12px"></div>
   </div>
@@ -1454,8 +1474,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 
 <div class="overlay onboarding" id="onb" role="dialog" aria-modal="true" aria-labelledby="onbT">
   <div class="box onbBox">
-    <div class="onbSteps" aria-label="Progression"><span id="onbDot1"></span><span id="onbDot2"></span><span id="onbDot3"></span></div>
-    <div class="eyebrow" id="onbS">Étape 1 sur 3</div>
+    <div class="eyebrow" id="onbS">Première utilisation</div>
     <h1 class="boxT" id="onbT">HERO FARM</h1>
     <div id="onbB"></div>
     <div class="onbError" id="onbError" role="alert"></div>
@@ -2157,6 +2176,8 @@ function rtFinish(opts={}){
     focusPendingSet = {sid: completedSid, set: nextInputSet};
     // Ne reconstruit pas la vue : le clavier et le champ actif restent intacts.
   }
+  const completedDef=completedSid&&getSlotDefBySid(completedSid);
+  if(completedDef) syncFocusSetRows(completedSid,completedDef.sets);
   if(!silent && rtGetSound()) rtBoxingBell();
   toast(reason ? `Repos terminé ${reason}.` : 'Repos terminé.');
   rtPersist();
@@ -2410,6 +2431,7 @@ function startRestForSid(sid){
     for(let i=1;i<=restSetCount;i++){ if(!doneMap[i]){ nextSet=i; break; } }
   }
   if(nextSet!=null) rtStartSet(nextSet);
+  syncFocusSetRows(sid,sd.sets);
 }
 function rtStartSet(setNumber){
   rtBlurActiveField();
@@ -2903,8 +2925,8 @@ function isExerciseInProgress(sid){
 
 function getFirstEmptySetNumber(sid, sets){
   for(let i=1;i<=sets;i++){
-    const v = toNum(document.getElementById(`setreps_${sid}_${i}`)?.value);
-    if(!Number.isFinite(v) || v<=0) return i;
+    const value=document.getElementById(`setreps_${sid}_${i}`)?.value??'';
+    if(!HFCore.validateReps(value,{allowEmpty:false}).ok) return i;
   }
   return null;
 }
@@ -2939,9 +2961,31 @@ function syncFocusSetRepsToCard(sid, sets){
 
 function handleFocusSetRepsInput(sid, sets){
   syncFocusSetRepsToCard(sid, sets);
-  const nextEmpty = getFirstEmptySetNumber(sid, sets);
-  focusPendingSet = nextEmpty ? {sid, set: nextEmpty} : null;
+  syncFocusSetRows(sid, sets);
+  if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
 }
+
+function focusSetState(value){
+  if(value==='') return {name:'empty',label:'À renseigner',valid:false};
+  if(HFCore.validateReps(value,{allowEmpty:false}).ok) return {name:'valid',label:'✓ Renseignée',valid:true};
+  return {name:'invalid',label:'À corriger',valid:false};
+}
+function syncFocusSetRows(sid, sets){
+  const focused=document.activeElement?.matches?.(`input[id^="f_setreps_${sid}_"]`)?document.activeElement:null;
+  let active=focused?Number(focused.id.split('_').at(-1)):null;
+  if(!active){
+    for(let i=1;i<=sets;i++) if(!focusSetState(document.getElementById(focusSetInputId(sid,i))?.value||'').valid){active=i;break;}
+  }
+  for(let i=1;i<=sets;i++){
+    const input=document.getElementById(focusSetInputId(sid,i)),row=input?.closest('.setRow');if(!row)continue;
+    const state=focusSetState(input.value);row.dataset.state=state.name;row.classList.toggle('active',i===active);
+    row.toggleAttribute('aria-current',i===active);input.setAttribute('aria-invalid',state.name==='invalid'?'true':'false');
+    const status=row.querySelector('.setState');if(status)status.textContent=state.label;
+  }
+  focusPendingSet=active?{sid,set:active}:null;
+}
+function handleFocusSetFocus(sid,sets){ syncFocusSetRows(sid,sets); }
+function handleFocusSetBlur(sid,sets){ requestAnimationFrame(()=>syncFocusSetRows(sid,sets)); }
 
 function focusNextSetFromInput(sid, sets, currentSet, ev){
   if(ev.key !== 'Enter') return;
@@ -2972,16 +3016,15 @@ function show(view){
     view==='stats' ? 'Analyse' :
     view==='goals' ? 'Références' : 'Simple';
   v3SetTab(view);
+  document.body.dataset.view=view;
   window.scrollTo({top:0,behavior:'auto'});
 }
 
 // V3 tab highlight
 function v3SetTab(view){
   const a=document.getElementById('sessionsBtn');
-  const g=document.getElementById('goalsBtn');
   const s=document.getElementById('statsBtn');
   if(a) a.classList.toggle('on', view==='home' || view==='sess');
-  if(g) g.classList.toggle('on', view==='goals');
   if(s) s.classList.toggle('on', view==='stats');
 }
 
@@ -3026,6 +3069,10 @@ function openSession(L){
   }
   saveDraft(L,buildSessionSnapshot(L));
   show('sess');
+  const savedView=d?.navigation?.view;
+  if(savedView==='guided' || (!savedView && matchMedia('(max-width: 600px)').matches)){
+    focusSeance=!d?.navigation?.sid;focusPickSid=d?.navigation?.sid||null;toggleFocus(true);
+  }
 }
 function openStats(){
   syncInSessionHints(); renderStats(); show('stats'); }
@@ -3599,16 +3646,16 @@ function renderFocus(opts={}){
   if(next.note){
     document.getElementById('fBody').innerHTML=`<div class="guidedSection"><div class="goal">Rappel technique</div><p>${escapeHtml(next.note)}</p><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><div class="guidedActions"><button class="btn ghost" onclick="openDone()">Terminer la séance</button><button class="btn" onclick="guidedNext('${next.sid}')">Exercice suivant</button></div>`;return;
   }
-  const first=getFirstEmptySetNumber(next.sid,next.sets),active=opts.focusSet||focusPendingSet?.sid===next.sid&&focusPendingSet.set||first;
-  const rows=Array.from({length:next.sets},(_,i)=>{const n=i+1,val=document.getElementById(`setreps_${next.sid}_${n}`)?.value||'',done=HFCore.validateReps(val,{allowEmpty:false}).ok;return `<div class="setRow ${n===active?'active':''}"><label for="${focusSetInputId(next.sid,n)}">Série ${n}</label><input id="${focusSetInputId(next.sid,n)}" aria-label="Répétitions série ${n}" type="number" min="1" step="1" inputmode="numeric" placeholder="${target}" value="${escapeHtml(val)}" oninput="handleFocusSetRepsInput('${next.sid}',${next.sets});this.parentElement.querySelector('.setState').textContent=this.value?'Renseignée':'À renseigner'" onkeydown="focusNextSetFromInput('${next.sid}',${next.sets},${n},event)"><span class="setState">${done?'✓ Renseignée':'À renseigner'}</span></div>`}).join('');
+  const rows=Array.from({length:next.sets},(_,i)=>{const n=i+1,val=document.getElementById(`setreps_${next.sid}_${n}`)?.value||'',state=focusSetState(val);return `<div class="setRow" data-set="${n}" data-state="${state.name}"><label for="${focusSetInputId(next.sid,n)}">Série ${n}</label><input id="${focusSetInputId(next.sid,n)}" aria-label="Répétitions série ${n}" type="number" min="1" step="1" inputmode="numeric" placeholder="${target}" value="${escapeHtml(val)}" oninput="handleFocusSetRepsInput('${next.sid}',${next.sets})" onfocus="handleFocusSetFocus('${next.sid}',${next.sets})" onblur="handleFocusSetBlur('${next.sid}',${next.sets})" onkeydown="focusNextSetFromInput('${next.sid}',${next.sets},${n},event)"><span class="setState" aria-live="polite">${state.label}</span></div>`}).join('');
   const ref=last.performedTs?(unit==='reps'?`${last.performedTotalReps} reps`:`${last.performedLoad} ${unit} • ${last.performedTotalReps} reps`):'Aucune référence pour cette variante.';
   const eff=getEff(next.sid),result=document.getElementById(`res_${next.sid}`)?.textContent||'',why=document.getElementById(`why_${next.sid}`)?.innerHTML||'';
   document.getElementById('fBody').innerHTML=`
     <div class="guidedSection"><div class="guidedTopActions"><button class="btn ghost" onclick="toggleFocus(false)">Tous les exercices</button><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div></div>
-    <div class="guidedSection"><div class="goal">Objectif • ${next.sets}×${target}${unit!=='reps'?(Number.isFinite(objective)?` • ${objective} ${unit}`:' • Charge à renseigner'):''}</div>${unit==='reps'?'':`<label class="guidedLabel" for="f_load_${next.sid}">Charge utilisée (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="Charge à renseigner" oninput="syncGuidedLoad('${next.sid}')"><div class="small">${chargeHelp(unit)}</div>`}</div>
-    <div class="guidedSection"><h3>Séries</h3>${rows}<div class="small">Total (information) : <b id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</b> reps</div><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos • ${next.rest}</button></div>
+    <div class="guidedSection"><div class="goal">Recommandation • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'':`<label class="guidedLabel" for="f_load_${next.sid}">Charge utilisée (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="Charge à renseigner" oninput="syncGuidedLoad('${next.sid}')">`}</div>
+    <div class="guidedSection"><h3>Répétitions</h3>${rows}<span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos • ${next.rest}</button></div>
     <div class="guidedSection guidedEffort"><div><b>Effort ressenti</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setEff('${next.sid}','EASY');renderFocus()">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setEff('${next.sid}','OK');renderFocus()">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setEff('${next.sid}','HARD');renderFocus()">😤 Dur</button></div><div id="fError" class="guidedError" role="alert"></div><button class="btn" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>${result?`<div class="guidedResult"><b>Recommandation</b>\n${escapeHtml(result)}${why?`<details><summary>Pourquoi ?</summary>${why}</details>`:''}</div><button class="btn ghost" onclick="guidedNext('${next.sid}')">Exercice suivant</button>`:''}</div>
-    <div class="guidedSection"><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div>`;
+    <div class="guidedSection"><button class="btn ghost" onclick="openDone()">Terminer la séance, même partielle</button></div>`;
+  syncFocusSetRows(next.sid,next.sets);
 }
 
 function syncFocusToCard(sid){
@@ -4581,30 +4628,27 @@ function programCard(mode){
   return `<button class="onbProgram${selected?' selected':''}" type="button" aria-pressed="${selected}" onclick="selectOnbProgram('${mode}')"><div class="selectedText">${selected?'✓ Programme sélectionné':''}</div><div class="programName">${meta.name}</div><div class="programFreq">${meta.weekly} séances${mode==='hybrid'?' de musculation':''} par semaine</div><div class="programDesc">${desc}</div><details class="programDetails" onclick="event.stopPropagation()"><summary>Voir les séances</summary>${sessionDetails(mode)}</details></button>`;
 }
 function openOnb({guide=false}={}){
-  guideOnly=guide; const saved=readSetup(); onbState=guide?{name:getProfile().name||'',program:getProgramMode()}:{name:saved.name||'',program:saved.program||null}; onbStep=guide?1:(saved.step||1);
+  guideOnly=guide; const saved=readSetup(); onbState=guide?{name:getProfile().name||'',program:getProgramMode()}:{name:saved.name||getProfile().name||'',program:saved.program||null}; onbStep=1;
   renderOnb(); document.getElementById('onb').classList.add('on');
 }
 function openGuide(){closeSettings();openOnb({guide:true});}
 function showOnbError(message){document.getElementById('onbError').textContent=message||'';}
 function renderOnb(){
   showOnbError(''); const body=document.getElementById('onbB'), title=document.getElementById('onbT');
-  document.getElementById('onbS').textContent=`Étape ${onbStep} sur 3`;
-  [1,2,3].forEach(n=>document.getElementById('onbDot'+n).classList.toggle('on',n<=onbStep));
-  const back=document.getElementById('onbBack'), next=document.getElementById('onbN'); back.style.display=onbStep===1?'none':'';
-  if(onbStep===1){title.textContent='HERO FARM';body.innerHTML=`<div class="onbLead">Tes séances, tes performances, ta progression.</div><div class="onbCopy">Choisis un programme, note tes séries et retrouve tes résultats au fil des séances.</div><label class="onbField" for="onbName">Prénom ou pseudo <span class="small muted">Facultatif · 30 caractères maximum</span><input id="onbName" maxlength="30" autocomplete="nickname"></label>${guideOnly?'':`<button class="btn ghost" type="button" onclick="triggerOnboardingImport()">J'ai déjà une sauvegarde JSON</button><button class="btn ghost" type="button" onclick="document.getElementById('importCsv')?.click()">J'ai une sauvegarde CSV</button>`}`; document.getElementById('onbName').value=onbState.name;next.textContent='Continuer';next.disabled=false;}
-  if(onbStep===2){title.textContent='Choisir son programme';body.innerHTML=`<div class="onbPrograms">${programCard('strength')}${programCard('hybrid')}</div>`;next.textContent='Continuer';next.disabled=!onbState.program;}
-  if(onbStep===3){const name=programLabel(onbState.program);title.textContent='Ta première séance';body.innerHTML=`<div class="onbCopy">Programme choisi : <b>${name}</b></div><div class="onbTips"><div class="onbTip"><b>Charge</b> : renseigne la charge utilisée. Elle peut être différente selon l'exercice et le matériel.</div><div class="onbTip"><b>Répétitions</b> : note ce que tu as réellement fait pour chaque série.</div><div class="onbTip"><b>Effort</b> : indique ton ressenti avec Facile, OK ou Dur. Il participe à la recommandation suivante.</div></div><div class="onbCopy">Le chronomètre t'aide à suivre tes temps de repos. Tu peux interrompre une séance et la reprendre.</div>${guideOnly?'':`<button class="btn ghost" type="button" onclick="finishOnboarding(false)">Aller à l'accueil</button>`}`;next.textContent=guideOnly?'Fermer le guide':'Ouvrir ma première séance';next.disabled=false;}
+  const back=document.getElementById('onbBack'), next=document.getElementById('onbN');back.style.display='none';
+  if(guideOnly){document.getElementById('onbS').textContent='Aide facultative';title.textContent='Pendant une séance';body.innerHTML=`<div class="onbTips"><div class="onbTip"><b>Charge</b> : saisis celle réellement utilisée.</div><div class="onbTip"><b>Répétitions</b> : renseigne chaque série, puis lance explicitement le repos.</div><div class="onbTip"><b>Effort</b> : Facile, OK ou Dur affine la prochaine recommandation.</div></div><div class="onbCopy">Ton brouillon est conservé si tu retournes à l’accueil. Le son du repos dépend du navigateur et n’est pas garanti écran verrouillé.</div>`;next.textContent='Fermer le guide';next.disabled=false;return;}
+  document.getElementById('onbS').textContent='Première utilisation';title.textContent='Choisis ton programme';body.innerHTML=`<div class="onbCopy">Tu peux consulter le détail des séances, puis commencer directement. Aucun prénom n’est requis.</div><div class="onbPrograms">${programCard('strength')}${programCard('hybrid')}</div><label class="onbField" for="onbName">Prénom ou pseudo <span class="small muted">Facultatif · modifiable dans Réglages</span><input id="onbName" maxlength="30" autocomplete="nickname" value="${escapeHtml(onbState.name)}"></label><button class="btn ghost" type="button" onclick="triggerOnboardingImport()">Restaurer une sauvegarde</button>`;next.textContent='Commencer';next.disabled=!onbState.program;
 }
-function selectOnbProgram(mode){onbState.program=mode;persistSetup();renderOnb();}
+function selectOnbProgram(mode){onbState.name=HFCore.normalizeName(document.getElementById('onbName')?.value??onbState.name);onbState.program=mode;persistSetup();renderOnb();}
 function previousOnb(){if(onbStep>1){onbStep--;persistSetup();renderOnb();}}
 function nextOnb(){
-  if(onbStep===1){onbState.name=HFCore.normalizeName(document.getElementById('onbName')?.value);onbStep=2;if(!persistSetup()){onbStep=1;return;}renderOnb();return;}
-  if(onbStep===2){if(!onbState.program){showOnbError('Choisis explicitement un programme.');return;}onbStep=3;if(!persistSetup()){onbStep=2;return;}renderOnb();return;}
   if(guideOnly){document.getElementById('onb').classList.remove('on');guideOnly=false;return;} finishOnboarding(true);
 }
 function finishOnboarding(openFirst){
   if(onboardingBusy)return;onboardingBusy=true;document.getElementById('onbN').disabled=true;
-  const result=HFCore.saveSetup(localStorage,{...onbState,step:3},{complete:true});
+  onbState.name=HFCore.normalizeName(document.getElementById('onbName')?.value);
+  if(!onbState.program){showOnbError('Choisis explicitement un programme.');onboardingBusy=false;document.getElementById('onbN').disabled=false;return;}
+  const result=HFCore.saveSetup(localStorage,{...onbState,step:1},{complete:true});
   if(!result.ok){showOnbError('Impossible d’enregistrer le programme. Vérifie l’espace de stockage puis réessaie.');onboardingBusy=false;document.getElementById('onbN').disabled=false;return;}
   document.getElementById('onb').classList.remove('on');onboardingBusy=false;renderHome();if(openFirst)openSession('A');else goHome();
 }
@@ -4619,8 +4663,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!handleInterruptedRecovery()) return;
   applyPrefs();
   document.getElementById('settingsBtn')?.addEventListener('click',openSettings);
+  document.getElementById('mobileSettingsBtn')?.addEventListener('click',openSettings);
   document.getElementById('statsBtn').addEventListener('click',openStats);
-  document.getElementById('goalsBtn').addEventListener('click',openGoals);
   document.getElementById('sessionsBtn').addEventListener('click',goHome);
   const rtEl=document.getElementById('rt');
   if(rtEl){

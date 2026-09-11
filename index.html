@@ -1142,17 +1142,6 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
 @media(max-width:390px){.focusBox{padding:15px;border-radius:22px}.setRow{grid-template-columns:1fr 92px}.setState{grid-column:1/-1}.guidedActions .btn{width:100%}}
 body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guidedEffort .sbtn.on{color:#17120a}
 
-@media(max-width:600px){
-  body:not([data-view=sess]){padding-bottom:calc(74px + env(safe-area-inset-bottom))}
-  .v3Top{position:static;padding:12px 14px 6px!important}.v3Logo{width:38px!important;height:38px!important}.v3Title{font-size:22px!important}.v3Sub{font-size:12px}.settingsFab{display:none}
-  .v3Nav{position:fixed;z-index:35;left:10px;right:10px;bottom:max(8px,env(safe-area-inset-bottom));padding:6px;border:1px solid var(--v3-stroke);border-radius:18px;background:color-mix(in srgb,var(--v3-bg) 94%,transparent);backdrop-filter:blur(18px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
-  .v3Tab{min-height:48px;padding:8px 4px;font-size:13px;border-color:transparent}.v3Tab.on{border-color:var(--v3-goldSoft)}
-  body[data-view=sess] .v3Top{display:none}body[data-view=sess] .v3Nav,.focus.on~.v3Nav{display:none}
-  .homeHero{padding:18px}.homeHero h1{font-size:26px}.homeSummary{padding:14px!important}
-  .focus{padding:0 0 calc(154px + env(safe-area-inset-bottom));background:var(--v3-bg)}.focusBox{width:100%;max-width:none;margin:0;border:0!important;border-radius:0!important;box-shadow:none!important;padding:14px}.focusHead{position:sticky;top:0;z-index:3;background:color-mix(in srgb,var(--v3-bg) 94%,transparent);padding:10px 0}
-}
-
-
 .progressTabs{display:flex;gap:8px;margin:14px 0;position:sticky;top:0;z-index:2;padding:6px;background:color-mix(in srgb,var(--v3-bg) 88%,transparent);border-radius:16px}.progressTabs .on{border-color:var(--g);box-shadow:inset 0 0 0 1px var(--g)}
 .progressControls,.progressFilters{display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px}.progressControls label,.progressFilters label{margin:0}.progressControls select,.progressFilters select{margin-top:6px}
 .progressHero{margin-top:12px}.metricSwitch{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.chartWrap{overflow:hidden}.progressChart{width:100%;height:auto;display:block}.chartPoint{cursor:pointer}.chartPoint:focus{outline:3px solid var(--v3-accent)}
@@ -1171,16 +1160,16 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
         <div class="v3Logo">H</div>
         <div>
           <div class="v3Title">HERO FARM</div>
-          <div class="v3Sub">S’entraîner avec méthode. Suivre ses progrès.</div>
+          <div class="v3Sub">S’entraîner avec méthode. Progresser avec certitude.</div>
         </div>
       </div>
       <button class="btn ghost settingsFab" type="button" id="settingsBtn" aria-label="Ouvrir les réglages">⚙️</button>
     </div>
 
     <div class="v3Nav" role="navigation" aria-label="Navigation">
-      <button class="v3Tab on" type="button" id="sessionsBtn">Entraînement</button>
+      <button class="v3Tab on" type="button" id="sessionsBtn">Séances</button>
+      <button class="v3Tab" type="button" id="goalsBtn">Objectifs</button>
       <button class="v3Tab" type="button" id="statsBtn">Progrès</button>
-      <button class="v3Tab" type="button" id="mobileSettingsBtn">Réglages</button>
     </div>
   </div>
 </header>
@@ -1231,8 +1220,8 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
     <div class="row" style="margin-top:2px">
       <div id="hintGoals" class="small" style="display:none;margin-bottom:6px;color:rgba(255,213,106,.95)"></div>
       <div>
-        <h1 style="font-size:18px;font-weight:950;margin:0">Charges de référence</h1>
-        <div class="small" style="margin-top:4px">Les <b>RP10</b> sont facultatifs : ils servent de point de départ lorsqu’un exercice n’a pas encore d’historique.</div>
+        <h1 style="font-size:18px;font-weight:950;margin:0">Objectifs</h1>
+        <div class="small" style="margin-top:4px">Renseigne tes <b>RP10</b> (charge que tu peux faire sur 10 reps à l’échec). Base cohérente si un exercice n’a pas encore d’historique.</div>
       </div>
       <div class="row">
         <button class="btn ghost" type="button" onclick="goHome()">Retour</button>
@@ -1355,16 +1344,6 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
         <button class="btn ghost" type="button" onclick="openGuide()">Revoir le guide</button>
       </div>
       <div class="settingCard">
-        <div class="settingTitle">Programme et données</div>
-        <div class="settingDesc">Retrouve les fonctions existantes sans encombrer l’entraînement.</div>
-        <button class="btn ghost" type="button" onclick="closeSettings();openProgramPicker()">Choisir le programme</button>
-        <button class="btn ghost" type="button" onclick="closeSettings();openGoals()">Charges de référence (RP10)</button>
-        <button class="btn ghost" type="button" onclick="closeSettings();openStats();setProgressView('history')">Historique</button>
-        <button class="btn ghost" type="button" onclick="exportFullBackup()">Télécharger une sauvegarde</button>
-        <button class="btn ghost" type="button" onclick="triggerJsonRestore()">Restaurer une sauvegarde</button>
-        <button class="btn ghost" type="button" onclick="exportData()">Exporter les données</button>
-      </div>
-      <div class="settingCard">
         <div class="settingTitle">Apparence</div>
         <div class="settingDesc">Choisis un thème façon iOS. “Auto” suit le réglage clair/sombre du téléphone.</div>
         <div class="themeChoice" role="group" aria-label="Choix du thème">
@@ -1391,7 +1370,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
           <div class="small" id="fSub">—</div>
         </div>
       </div>
-      <div class="guidedTopActions"><button class="btn ghost" type="button" onclick="goHome()">Accueil</button><button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button></div>
+      <button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button>
     </div>
     <div id="fBody" style="margin-top:12px"></div>
   </div>
@@ -3016,15 +2995,16 @@ function show(view){
     view==='stats' ? 'Analyse' :
     view==='goals' ? 'Références' : 'Simple';
   v3SetTab(view);
-  document.body.dataset.view=view;
   window.scrollTo({top:0,behavior:'auto'});
 }
 
 // V3 tab highlight
 function v3SetTab(view){
   const a=document.getElementById('sessionsBtn');
+  const g=document.getElementById('goalsBtn');
   const s=document.getElementById('statsBtn');
   if(a) a.classList.toggle('on', view==='home' || view==='sess');
+  if(g) g.classList.toggle('on', view==='goals');
   if(s) s.classList.toggle('on', view==='stats');
 }
 
@@ -3069,10 +3049,6 @@ function openSession(L){
   }
   saveDraft(L,buildSessionSnapshot(L));
   show('sess');
-  const savedView=d?.navigation?.view;
-  if(savedView==='guided' || (!savedView && matchMedia('(max-width: 600px)').matches)){
-    focusSeance=!d?.navigation?.sid;focusPickSid=d?.navigation?.sid||null;toggleFocus(true);
-  }
 }
 function openStats(){
   syncInSessionHints(); renderStats(); show('stats'); }
@@ -4663,8 +4639,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!handleInterruptedRecovery()) return;
   applyPrefs();
   document.getElementById('settingsBtn')?.addEventListener('click',openSettings);
-  document.getElementById('mobileSettingsBtn')?.addEventListener('click',openSettings);
   document.getElementById('statsBtn').addEventListener('click',openStats);
+  document.getElementById('goalsBtn').addEventListener('click',openGoals);
   document.getElementById('sessionsBtn').addEventListener('click',goHome);
   const rtEl=document.getElementById('rt');
   if(rtEl){

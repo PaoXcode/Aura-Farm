@@ -47,11 +47,14 @@ async function shot(page,name,theme,viewport){
 }
 
 try{
-  // Parcours réel d'un nouvel utilisateur : choix explicite, persistance, séance A directe.
+  // La séance s'ouvre sur les repères habituels ; la vue guidée reste volontaire.
   {
     const run=await pageFor({storage:{}},{width:390,height:844},'light');
     await run.page.click('.onbProgram:has-text("Musculation")');
     await run.page.click('#onbN');
+    await run.page.waitForSelector('#sess.on');
+    if(await run.page.locator('#focus').evaluate(el=>el.classList.contains('on')))throw Error('Vue guidée ouverte automatiquement');
+    await run.page.click('#focusBtn');
     await run.page.waitForSelector('#focus.on');
     if(await run.page.evaluate(()=>localStorage.getItem('aurafarm_program_mode_v1'))!=='strength')throw Error('Programme non persisté');
     await run.context.close();

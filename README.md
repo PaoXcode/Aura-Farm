@@ -1,2 +1,2 @@
-# Aura-Farm
-Aura Farm - application d'entraînement
+# HERO FARM
+HERO FARM - application d'entraînement

@@ -24,10 +24,20 @@ test('le focus possède un contraste dédié et un verrouillage réentrant', () 
 });
 
 test('le repos essentiel est visible dans la barre stable et protège le chrono actif', () => {
-  assert.match(html, /guidedActionBar[\s\S]*guidedRestButton[\s\S]*Repos · \$\{escapeHtml\(next\.rest\)\}/);
+  assert.match(html, /guidedActionBar[\s\S]*guidedRestButton[\s\S]*guidedRestIcon[\s\S]*Repos[\s\S]*\$\{escapeHtml\(next\.rest\)\}/);
   const menu = html.match(/<details class="guidedMenu"[\s\S]*?<\/details>/)?.[0] || '';
   assert.doesNotMatch(menu, /Lancer le repos/);
   assert.match(html, /function startRestForSid\(sid\)[\s\S]*if\(rtState\.running\)\{ rtShow\(true\); syncRestTimerHost\(\); return; \}/);
+});
+
+test('le repos compact conserve sept cibles accessibles et le focus quatre commandes', () => {
+  const timer = html.match(/<div class="rt" id="rt"[\s\S]*?<\/div>\s*<\/div>\s*<script/)?.[0] || '';
+  for(const label of ['Retirer 15 secondes','Ajouter 15 secondes','Réinitialiser le chronomètre','Passer en mode compact','Désactiver le son','Fermer le chronomètre']){
+    assert.match(timer, new RegExp(`aria-label="${label}"`));
+  }
+  assert.match(html, /\.rt \.rtA[^}]*grid-template-columns:repeat\(7,minmax\(44px,1fr\)\)/);
+  assert.match(html, /\.focusRestDock \.rtA[^}]*grid-template-columns:repeat\(4,minmax\(44px,1fr\)\)/);
+  assert.doesNotMatch(html, /Mode compact actif : la séance reste visible/);
 });
 
 test('C1 est un rappel saisissable sans effort ni progression automatique', () => {

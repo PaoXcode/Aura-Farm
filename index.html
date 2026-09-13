@@ -1171,6 +1171,41 @@ body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guided
 @media(max-width:600px){.progressControls,.progressFilters{grid-template-columns:1fr}.sessionDetail table,.sessionDetail tbody,.sessionDetail tr,.sessionDetail td{display:block}.sessionDetail thead{display:none}.sessionDetail tr{padding:10px 0;border-bottom:1px solid var(--v3-stroke)}.sessionDetail td{padding:5px 0}.progressTabs .sbtn{flex:1;padding-inline:8px}.chartPoint{stroke-width:12}}
 @media(max-width:600px){.boxH{align-items:center}.boxH>.btn{flex:0 0 auto}.rt{bottom:max(10px,env(safe-area-inset-bottom));max-height:calc(100dvh - 20px);overflow:auto}.rtA{width:100%}.rtBtn{min-width:44px}.progressTabs{overflow-x:auto;overscroll-behavior-inline:contain}.progressTabs .sbtn{flex:1 0 auto}}
 body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{background:rgba(255,255,255,.65);border-color:rgba(29,29,31,.14)}
+
+/* Focus exercice — trois zones stables, sans la compression introduite en PR 52. */
+.focusBox{display:flex;flex-direction:column;max-height:calc(100dvh - 28px);overflow:hidden}
+.focusHead{flex:0 0 auto}.focusHeadMain{display:flex;gap:12px;align-items:center;min-width:0}.focusHeading{min-width:0}
+.focusHead .boxT{overflow-wrap:anywhere}.focusExit{flex:0 0 auto}
+.guidedBody{display:flex;flex-direction:column;min-height:0}
+.guidedScroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:3px}
+.guidedMenu{margin:10px 0 0;padding:0;background:transparent}.guidedMenu summary{min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--m)}
+.guidedMenuActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:10px}.guidedMenuActions .btn{border-radius:14px}
+.guidedActionBar{flex:0 0 auto;padding:10px 0 0;border-top:1px solid var(--v3-line,rgba(255,213,106,.18))}
+.guidedPrimary{width:100%;min-height:50px;border-radius:15px;background:linear-gradient(135deg,#f3d879,#c49520);border-color:#f3d879;color:#17130a;font-size:16px;box-shadow:0 10px 28px rgba(212,175,55,.18)}
+.guidedPrimary[disabled]{opacity:.65;cursor:wait}.guidedError{font-size:13px;line-height:1.4;min-height:0;margin:0 0 7px;white-space:normal;overflow:visible}
+.guidedResult{margin-top:8px;max-height:none!important;overflow:visible!important;font-size:13px!important;line-height:1.4!important}
+.guidedResult details{display:block!important;margin-top:8px}.guidedResult summary{min-height:44px;display:flex;align-items:center}
+.setRow[data-state=valid]{border-color:rgba(95,190,130,.45);background:rgba(70,170,110,.07)}
+.setRow[data-state=invalid]{border-color:#e26f67;background:rgba(226,111,103,.08)}
+.focusRestDock:empty{display:none}
+.focusRestDock>.rt.on{position:static;transform:none;width:100%;display:flex;margin-top:8px;box-shadow:none;background:rgba(212,175,55,.07);z-index:auto}
+.focusRestDock .rtHint,.focusRestDock .rtViewBtn{display:none}
+
+@media(max-width:600px){
+  .focusBox{height:100dvh;max-height:100dvh;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
+  .focusHead{min-height:58px;padding-bottom:9px}.focusHeadMain{gap:9px}.focusHead .boxI{display:grid;width:34px;height:34px}.focusHead .boxT{font-size:17px;line-height:1.15;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.focusHead .small{font-size:12px;margin-top:2px}.focusExit{width:44px;min-width:44px;height:44px;padding:0;font-size:20px}
+  #fBody.guidedBody{display:flex;flex-direction:column;flex:1;min-height:0}
+  .guidedScroll{flex:1}.guidedSection{padding:9px 0}
+  .guidedOverview{display:block}.guidedOverview .small{display:block;font-size:12px}.guidedOverview p{font-size:14px}
+  .guidedPrescription{grid-template-columns:minmax(0,1fr) minmax(120px,38%);gap:10px}.guidedPrescription .goal{font-size:13px;line-height:1.3}.guidedPrescription label{font-size:12px}.guidedPrescription input{font-size:16px;min-height:44px}
+  .guidedSets h3{font-size:14px;margin-bottom:7px}.guidedSetGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.setRow{display:grid;grid-template-columns:1fr 70px;grid-template-rows:auto auto;gap:2px 8px;text-align:left;padding:7px 8px;min-height:62px}.setRow label{font-size:13px;align-self:center}.setRow input{grid-column:2;grid-row:1/3;min-height:44px;font-size:16px}.setRow .setState{grid-column:1;font-size:11px;white-space:normal;overflow:visible}
+  .guidedRest{display:none}.guidedEffort{display:block}.guidedEffortTitle{font-size:13px}.guidedEffort .helpBtn{display:inline-flex}.guidedEffort .seg{margin-top:7px}.guidedEffort .sbtn{min-height:44px;font-size:12px}.guidedEffort>.btn{display:none}
+  .guidedFinish{display:none}.guidedMenu{margin-top:7px}.guidedActionBar{padding-top:8px}.guidedPrimary{min-height:50px}
+  .focusRestDock>.rt.on{padding:8px;gap:7px;max-height:none;overflow:visible}.focusRestDock .rtL{min-width:0;max-width:none;flex:1}.focusRestDock .rtSets{display:none!important}.focusRestDock .rtC{font-size:19px;min-width:72px;padding:6px}.focusRestDock .rtA{width:auto;margin-left:0;flex-wrap:nowrap;gap:5px}.focusRestDock .rtBtn{padding:6px;min-width:44px;font-size:0}.focusRestDock #rtToggle{font-size:12px}.focusRestDock #rtClose::after{content:'Fermer';font-size:11px}.focusRestDock #rtMinus::after{content:'−15';font-size:11px}.focusRestDock #rtPlus::after{content:'+15';font-size:11px}.focusRestDock #rtReset,.focusRestDock #rtViewBtn,.focusRestDock #rtSoundBtn{display:none}
+}
+@media(max-width:340px){.guidedSetGrid{grid-template-columns:1fr}.guidedMenuActions{grid-template-columns:1fr}}
+@media(max-height:650px) and (orientation:landscape){.guidedSetGrid{grid-template-columns:repeat(3,minmax(120px,1fr))}.guidedScroll{padding-bottom:4px}}
+@media(prefers-reduced-motion:reduce){.rt.done,.rt.done .rtC{animation:none}}
 </style>
 </head>
 <body>
@@ -1385,16 +1420,17 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 <div class="focus" id="focus" role="dialog" aria-modal="true" aria-labelledby="fTitle">
   <div class="focusBox">
     <div class="focusHead">
-      <div style="display:flex;gap:12px;align-items:center">
+      <div class="focusHeadMain">
         <div class="boxI">🎯</div>
-        <div>
+        <div class="focusHeading">
           <div class="boxT" id="fTitle">Vue guidée</div>
           <div class="small" id="fSub">—</div>
         </div>
       </div>
-      <button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button>
+      <button class="btn ghost focusExit" type="button" aria-label="Quitter le focus" title="Quitter le focus" onclick="toggleFocus(false)">×</button>
     </div>
     <div id="fBody" class="guidedBody" style="margin-top:12px"></div>
+    <div id="focusRestDock" class="focusRestDock" aria-label="Chronomètre de repos intégré"></div>
   </div>
 </div>
 
@@ -1513,13 +1549,13 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
   </div>
   <div class="rtC" id="rtClock">00:00</div>
   <div class="rtA">
-    <button class="btn ghost rtBtn" type="button" onclick="rtAdd(-15)">-15s</button>
+    <button class="btn ghost rtBtn" id="rtMinus" type="button" aria-label="Retirer 15 secondes" onclick="rtAdd(-15)">-15s</button>
     <button class="btn rtBtn" type="button" id="rtToggle" onclick="rtToggle()">Start</button>
-    <button class="btn ghost rtBtn" type="button" onclick="rtAdd(15)">+15s</button>
-    <button class="btn ghost rtBtn" type="button" onclick="rtReset()">Reset</button>
+    <button class="btn ghost rtBtn" id="rtPlus" type="button" aria-label="Ajouter 15 secondes" onclick="rtAdd(15)">+15s</button>
+    <button class="btn ghost rtBtn" id="rtReset" type="button" onclick="rtReset()">Reset</button>
     <button class="btn ghost rtBtn" type="button" id="rtViewBtn" onclick="rtToggleView()">Compact</button>
     <button class="btn ghost rtBtn" type="button" id="rtSoundBtn" onclick="rtToggleSound()">🔊</button>
-<button class="btn ghost rtBtn" type="button" onclick="rtClose()">✕</button> <!-- ✅ close -->
+<button class="btn ghost rtBtn" id="rtClose" type="button" aria-label="Fermer le chronomètre" onclick="rtClose()">✕</button> <!-- ✅ close -->
   </div>
 </div>
 
@@ -2099,8 +2135,17 @@ function rtToggleView(){
   toast(rtState.fullscreen ? 'Mode plein écran activé.' : 'Mode compact activé.');
 }
 function rtApplyView(){
-  document.body.classList.toggle('rt_full', !!(rtState.visible && rtState.fullscreen));
+  syncRestTimerHost();
+  // En focus, le même chronomètre occupe son dock : il ne devient jamais un
+  // second écran flottant au-dessus de la saisie.
+  document.body.classList.toggle('rt_full', !!(rtState.visible && rtState.fullscreen && !focusOn));
   rtUpdateViewUI();
+}
+function syncRestTimerHost(){
+  const timer=document.getElementById('rt'),dock=document.getElementById('focusRestDock');
+  if(!timer) return;
+  const target=(focusOn&&dock)?dock:document.body;
+  if(timer.parentElement!==target) target.appendChild(timer);
 }
 function rtUpdateViewUI(){
   const b = document.getElementById('rtViewBtn');
@@ -2908,6 +2953,7 @@ function isExerciseDirty(sid){
     const repsCur = repsVal && repsVal > 0 ? repsVal : null;
     if(repsCur !== repsBase) return true;
     if(loadEl && loadVal !== loadBase) return true;
+    if(validated.eff && getEff(sid)!==validated.eff) return true;
     return false;
   }
 
@@ -2963,7 +3009,15 @@ function syncFocusSetRepsToCard(sid, sets){
 function handleFocusSetRepsInput(sid, sets){
   syncFocusSetRepsToCard(sid, sets);
   syncFocusSetRows(sid, sets);
+  refreshGuidedPrimary(sid);
   if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
+}
+function refreshGuidedPrimary(sid){
+  const button=document.querySelector('.guidedActionBar .guidedPrimary');
+  if(!button||!exoValidated[sid]||!isExerciseDirty(sid)) return;
+  button.textContent='Valider les corrections';
+  button.onclick=()=>guidedValidate(sid);
+  document.querySelector('.guidedResult')?.setAttribute('hidden','');
 }
 
 function focusSetState(value){
@@ -3040,11 +3094,12 @@ function openSession(L){
   resetExerciseProgressState();
   const existingDraft=loadDraft();
   currentSessionId=(existingDraft && existingDraft.letter===L && existingDraft.sessionId) || newId();
+  focusPickSid=(existingDraft?.letter===L&&existingDraft?.navigation?.sid)||null;
   if(existingDraft?.progressBaseline && typeof existingDraft.progressBaseline==='object') sessionProgressBaselineByVid=existingDraft.progressBaseline;
   current={L};
   document.getElementById('sessTitle').innerHTML=`<span class="session-title-word">Séance</span><span class="session-letter">${L}</span>`;
   document.getElementById('btnDone').onclick=()=>openDone();
-  document.getElementById('focusBtn').onclick=()=>{ focusSeance=true; focusPickSid=null; focusPendingSet=null; toggleFocus(true); };
+  document.getElementById('focusBtn').onclick=()=>{ focusSeance=!focusPickSid; focusPendingSet=null; toggleFocus(true); };
   document.getElementById('sessMeta').textContent = `${S.sub} • durée planifiée estimée ~${estimateSessionMinutes(L)} min`;
   document.getElementById('hybridSessionContext').style.display=getProgramMode()==='hybrid'?'block':'none';
   renderSession(L);
@@ -3565,7 +3620,7 @@ function validate(L, sid){
     nextAction: rx.action,
     nextAdvice: rx.why.slice(),
   });
-  exoValidated[sid] = {reps: totalReps, load: load};
+  exoValidated[sid] = {reps: totalReps, load: load, eff};
 
   const todayLine = (unit==='reps') ? `${totalReps} reps · ${effLabel(eff)}` : `${totalReps} reps · ${load} ${unit} · ${effLabel(eff)}`;
   const nextLine  = (unit==='reps') ? `${slotDef.sets}×${rx.nextRPS}` : `${slotDef.sets}×${rx.nextRPS} · ${rx.nextLoad} ${unit}`;
@@ -3579,9 +3634,13 @@ function validate(L, sid){
     whyBox.innerHTML = `<b>Pourquoi</b><br>${lines.map(x=>'• '+escapeHtml(x)).join('<br>')}`;
   }
 
-  toast(recMsg || 'OK. Décision cohérente et expliquée.');
-  // ✅ sauvegarde brouillon séance
-  try{ saveDraft(L, buildSessionSnapshot(L)); }catch{}
+  // Le succès n'est annoncé qu'une fois le brouillon réellement écrit.
+  if(!saveDraft(L, buildSessionSnapshot(L))){
+    delete exoValidated[sid];
+    if(res) res.textContent='Enregistrement impossible. Tes saisies restent affichées : réessaie.';
+    return false;
+  }
+  toast(recMsg || 'Exercice enregistré.');
   if(focusOn) renderFocus();
   return true;
 }
@@ -3604,6 +3663,9 @@ function toggleFocus(on){
   el.classList.toggle('on',focusOn);
   // ✅ On NE ferme PLUS le chrono en quittant le focus
   if(focusOn) renderFocus();
+  syncRestTimerHost();
+  rtApplyView();
+  if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
 }
 
 
@@ -3612,15 +3674,33 @@ function syncGuidedLoad(sid){
   if(source&&target) target.value=source.value;
   if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
 }
+let guidedValidationPending=false;
 function guidedValidate(sid){
+  if(guidedValidationPending) return;
+  guidedValidationPending=true;
+  const primary=document.querySelector('.guidedActionBar .guidedPrimary');
+  if(primary) primary.disabled=true;
   syncFocusToCard(sid); syncGuidedLoad(sid);
-  const ok=validate(current.L,sid);
+  let ok=false;
+  try{ ok=validate(current.L,sid); }
+  catch{
+    const error=document.getElementById('fError');
+    if(error) error.textContent='Enregistrement impossible. Tes saisies restent affichées : réessaie.';
+  }
   if(!ok){
     const source=document.getElementById(`res_${sid}`)?.textContent||'Corrige les champs indiqués.';
     const error=document.getElementById('fError'); if(error) error.textContent=source;
     const cardLoad=document.getElementById(`load_${sid}`);
     if(cardLoad?.getAttribute('aria-invalid')) document.getElementById(`f_load_${sid}`)?.setAttribute('aria-invalid','true');
   }
+  guidedValidationPending=false;
+  const currentPrimary=document.querySelector('.guidedActionBar .guidedPrimary');
+  if(currentPrimary) currentPrimary.disabled=false;
+}
+function setGuidedEffort(sid,eff,button){
+  setEff(sid,eff);
+  button?.closest('.seg')?.querySelectorAll('.sbtn').forEach(el=>el.classList.toggle('on',el===button));
+  refreshGuidedPrimary(sid);
 }
 function guidedNext(sid){
   syncFocusToCard(sid); syncGuidedLoad(sid);
@@ -3629,31 +3709,40 @@ function guidedNext(sid){
   const next=ordered.find(x=>!areExerciseSetsComplete(x.sid,x.sets));
   if(!next){toast('Tous les exercices sont renseignés. Tu peux terminer la séance.');return;}
   focusSeance=false;focusPickSid=next.sid;focusPendingSet=null;renderFocus();
+  if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
 }
 function renderFocus(opts={}){
   if(!current?.L)return;
   const S=getActiveProgram()[current.L],actives=S.slots.filter(x=>!x.note);
   let next=S.slots.find(x=>x.sid===focusPickSid)||actives.find(x=>!areExerciseSetsComplete(x.sid,x.sets))||actives.at(-1)||S.slots[0];
-  if(focusSeance) next=actives.find(x=>!areExerciseSetsComplete(x.sid,x.sets))||actives.at(-1)||next;
+  // Le choix automatique n'a lieu qu'à l'entrée. Une fois affiché, l'exercice
+  // est épinglé jusqu'à l'action explicite « exercice suivant ».
+  focusPickSid=next.sid;
+  focusSeance=false;
   const vid=getVariantForSlot(next.sid,next.defaultVid),v=variantMeta(next,vid),last=getLast(v.vid,next.baseLoad),unit=v.unit||'kg';
   const target=Number.isFinite(last.nextRepsPerSet)?clampInt(last.nextRepsPerSet,next.lo,next.hi):next.lo;
   const objective=Number.isFinite(last.nextLoad)?last.nextLoad:suggestedStartLoad(next,v,target);
-  const idx=Math.max(1,S.slots.findIndex(x=>x.sid===next.sid)+1),cardLoad=document.getElementById(`load_${next.sid}`)?.value||'';
+  const idx=Math.max(1,actives.findIndex(x=>x.sid===next.sid)+1),cardLoad=document.getElementById(`load_${next.sid}`)?.value||'';
   document.getElementById('fTitle').textContent=v.name;
-  document.getElementById('fSub').textContent=`Exercice ${idx}/${S.slots.length} • ${next.muscle}`;
+  document.getElementById('fSub').textContent=`Exercice ${idx}/${actives.length} • ${next.muscle}`;
   if(next.note){
     document.getElementById('fBody').innerHTML=`<div class="guidedSection"><div class="goal">Rappel technique</div><p>${escapeHtml(next.note)}</p><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><div class="guidedActions"><button class="btn ghost" onclick="openDone()">Terminer la séance</button><button class="btn" onclick="guidedNext('${next.sid}')">Exercice suivant</button></div>`;return;
   }
   const rows=Array.from({length:next.sets},(_,i)=>{const n=i+1,val=document.getElementById(`setreps_${next.sid}_${n}`)?.value||'',state=focusSetState(val);return `<div class="setRow" data-set="${n}" data-state="${state.name}"><label for="${focusSetInputId(next.sid,n)}">Série ${n}</label><input id="${focusSetInputId(next.sid,n)}" aria-label="Répétitions série ${n}" type="number" min="1" step="1" inputmode="numeric" placeholder="${target}" value="${escapeHtml(val)}" oninput="handleFocusSetRepsInput('${next.sid}',${next.sets})" onfocus="handleFocusSetFocus('${next.sid}',${next.sets})" onblur="handleFocusSetBlur('${next.sid}',${next.sets})" onkeydown="focusNextSetFromInput('${next.sid}',${next.sets},${n},event)"><span class="setState" aria-live="polite">${state.label}</span></div>`}).join('');
   const ref=last.performedTs?(unit==='reps'?`${last.performedTotalReps} reps`:`${last.performedLoad} ${unit} • ${last.performedTotalReps} reps`):'Aucune référence pour cette variante.';
   const eff=getEff(next.sid),result=document.getElementById(`res_${next.sid}`)?.textContent||'',why=document.getElementById(`why_${next.sid}`)?.innerHTML||'';
+  const isValidated=!!exoValidated[next.sid]&&!isExerciseDirty(next.sid);
   document.getElementById('fBody').innerHTML=`
-    <div class="guidedSection guidedOverview"><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div><div class="guidedTopActions"><button class="btn ghost" onclick="toggleFocus(false)">Tous les exercices</button><button class="btn ghost" onclick="openSwap('${next.sid}')">⇄ Changer</button></div></div>
-    <div class="guidedSection guidedPrescription"><div class="goal">Objectif • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'<span></span>':`<div><label class="guidedLabel" for="f_load_${next.sid}">Charge (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="0" oninput="syncGuidedLoad('${next.sid}')"></div>`}</div>
-    <div class="guidedSection guidedSets" style="--set-count:${next.sets}"><h3>Répétitions par série</h3><div class="guidedSetGrid">${rows}</div><span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span><button class="btn ghost guidedRest" onclick="startRestForSid('${next.sid}')">⏱ Repos • ${next.rest}</button></div>
-    <div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setEff('${next.sid}','EASY');renderFocus()">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setEff('${next.sid}','OK');renderFocus()">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setEff('${next.sid}','HARD');renderFocus()">😤 Dur</button></div><button class="btn" onclick="guidedValidate('${next.sid}')">Valider</button><div id="fError" class="guidedError" role="alert"></div>${result?`<div class="guidedResult"><b>Prochaine fois :</b> ${escapeHtml(result)}${why?`<details><summary>Pourquoi ?</summary>${why}</details>`:''}</div><button class="btn ghost guidedNext" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:''}</div>
-    <div class="guidedFinish"><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div>`;
+    <div class="guidedScroll">
+    <div class="guidedSection guidedOverview"><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div></div>
+    <div class="guidedSection guidedPrescription"><div class="goal">Objectif • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'<span></span>':`<div><label class="guidedLabel" for="f_load_${next.sid}">Charge (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="0" oninput="syncGuidedLoad('${next.sid}');refreshGuidedPrimary('${next.sid}')"></div>`}</div>
+    <div class="guidedSection guidedSets"><h3>Répétitions par série</h3><div class="guidedSetGrid">${rows}</div><span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span></div>
+    <div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort ressenti</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setGuidedEffort('${next.sid}','EASY',this)">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setGuidedEffort('${next.sid}','OK',this)">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setGuidedEffort('${next.sid}','HARD',this)">😤 Dur</button></div>${result?`<div class="guidedResult"><b>Exercice enregistré.</b><br>${escapeHtml(result)}${why?`<details><summary>Voir l’explication</summary>${why}</details>`:''}</div>`:''}</div>
+    <details class="guidedMenu"><summary>••• Plus d’actions</summary><div class="guidedMenuActions"><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer de variante</button><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos</button><button class="btn ghost" onclick="toggleFocus(false)">Voir tous les exercices</button><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div></details>
+    </div>
+    <div class="guidedActionBar"><div id="fError" class="guidedError" role="alert"></div>${isValidated?`<button class="btn guidedPrimary" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:`<button class="btn guidedPrimary" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>`}</div>`;
   syncFocusSetRows(next.sid,next.sets);
+  syncRestTimerHost();
 }
 
 function syncFocusToCard(sid){
@@ -4537,7 +4626,8 @@ function exportData(){
 const DRAFT_KEY='paogramme_session_draft_v1';
 
 function saveDraft(letter, items, programMode=getProgramMode()){
-  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({version:2,sessionId:currentSessionId||newId(),letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[],progressBaseline:sessionProgressBaselineByVid,navigation:{view:focusOn?'guided':'overview',sid:focusPickSid||null}})); }catch{ toast('Brouillon non sauvegardé : stockage indisponible.'); }
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({version:2,sessionId:currentSessionId||newId(),letter:letter||'', programMode:programMode==='hybrid'?'hybrid':'strength', items:items||[],progressBaseline:sessionProgressBaselineByVid,navigation:{view:focusOn?'guided':'overview',sid:focusPickSid||null}})); return true; }
+  catch{ toast('Brouillon non sauvegardé : stockage indisponible.'); return false; }
 }
 function loadDraft(){
   try{

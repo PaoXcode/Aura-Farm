@@ -1181,6 +1181,9 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 .guidedMenu{margin:10px 0 0;padding:0;background:transparent}.guidedMenu summary{min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--m)}
 .guidedMenuActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:10px}.guidedMenuActions .btn{border-radius:14px}
 .guidedActionBar{flex:0 0 auto;padding:10px 0 0;border-top:1px solid var(--v3-line,rgba(255,213,106,.18))}
+.guidedActionButtons{display:grid;grid-template-columns:minmax(132px,.72fr) minmax(0,1.28fr);gap:8px}
+.guidedRestButton{min-height:50px;border-radius:15px;border:1px solid #d2a62f;background:#17130a;color:#f3d879;font-weight:950;white-space:nowrap;box-shadow:0 8px 22px rgba(212,175,55,.12)}
+.guidedRestButton:hover{border-color:#f3d879;background:#211a0b;color:#ffe49a}.guidedRestButton:active{background:#2a210d;transform:translateY(1px)}
 .guidedPrimary{width:100%;min-height:50px;border-radius:15px;background:linear-gradient(135deg,#f3d879,#c49520);border-color:#f3d879;color:#17130a;font-size:16px;box-shadow:0 10px 28px rgba(212,175,55,.18)}
 .guidedPrimary[disabled]{opacity:.65;cursor:wait}.guidedError{font-size:13px;line-height:1.4;min-height:0;margin:0 0 7px;white-space:normal;overflow:visible}
 .guidedResult{margin-top:8px;max-height:none!important;overflow:visible!important;font-size:13px!important;line-height:1.4!important}
@@ -1782,7 +1785,7 @@ const PROGRAM_STRENGTH={
     {sid:'B5',slot:'curl_bi',muscle:M.BICEPS,sets:2,lo:12,hi:15,rest:'1 min',baseLoad:25,defaultVid:'preacher'},
   ]},
   C:{title:'Séance C',sub:'Haut · Biceps · Triceps',slots:[
-    {sid:'C1',slot:'decline',muscle:M.CHEST,sets:2,lo:8,hi:12,rest:'2 min',baseLoad:50,defaultVid:'decline_machine',note:'Rappel technique. Pas d’obligation de progresser.'},
+    {sid:'C1',slot:'decline',muscle:M.CHEST,sets:2,lo:8,hi:12,rest:'2 min',baseLoad:50,defaultVid:'decline_machine',note:'Rappel technique. Pas d’obligation de progresser.',trackable:true,autoProgress:false,effortOptional:true},
     {sid:'C2',slot:'dips_machine',muscle:M.CHEST,sets:3,lo:8,hi:15,rest:'2 min',baseLoad:80,defaultVid:'dips_machine'},
     {sid:'C3',slot:'pullup',muscle:M.BACK,sets:3,lo:10,hi:15,rest:'2 min',baseLoad:45,defaultVid:'lat_neutral'},
     {sid:'C4',slot:'row_uni',muscle:M.BACK,sets:3,lo:10,hi:15,rest:'2 min',baseLoad:28,defaultVid:'row_uni'},
@@ -2491,6 +2494,8 @@ function getSlotDefBySid(sid){
 function startRestForSid(sid){
   const sd = getSlotDefBySid(sid);
   if(!sd) return;
+  // Un appui répété ne remplace ni ne remet à zéro le compte à rebours actif.
+  if(rtState.running){ rtShow(true); syncRestTimerHost(); return; }
   const restMin = parseRestMin(sd.rest);
   const sec = Math.round(restMin*60);
   const vid = getVariantForSlot(sd.sid, sd.defaultVid);
@@ -3015,7 +3020,7 @@ function areExerciseSetsComplete(sid, sets){
 
 function areAllActiveExerciseSetsComplete(slots){
   return (slots||[])
-    .filter(sd=>!sd.note)
+    .filter(sd=>sd.trackable!==false)
     .every(sd=>areExerciseSetsComplete(sd.sid, sd.sets));
 }
 
@@ -3434,14 +3439,15 @@ function exoCard(L, slotDef){
     <div class="small" style="margin-top:8px">Total calculé automatiquement : <b id="repsTotView_${slotDef.sid}">0</b> reps</div>
     <input id="reps_${slotDef.sid}" type="hidden" value="0"/>
 
-    ${slotDef.note?`<div class="res">${escapeHtml(slotDef.note)}</div>`:`
-      <div><b>Effort</b></div>
+    ${slotDef.note?`<div class="res">${escapeHtml(slotDef.note)}</div>`:''}
+    ${slotDef.trackable===false?'':`
+      ${slotDef.effortOptional?'':`<div><b>Effort</b></div>
       <div class="seg" id="seg_${slotDef.sid}">
         <button class="sbtn" data-eff="EASY" type="button" onclick="setEff('${slotDef.sid}','EASY')">😌 Facile</button>
         <button class="sbtn" data-eff="OK" type="button" onclick="setEff('${slotDef.sid}','OK')">🙂 OK</button>
         <button class="sbtn" data-eff="HARD" type="button" onclick="setEff('${slotDef.sid}','HARD')">😤 Dur</button>
       </div>
-      <div class="small" style="margin-top:8px">Effort : <b id="eff_${slotDef.sid}">${effLabel(eff)}</b></div>
+      <div class="small" style="margin-top:8px">Effort : <b id="eff_${slotDef.sid}">${effLabel(eff)}</b></div>`}
       <button class="btn" type="button" style="margin-top:12px" onclick="validate('${L}','${slotDef.sid}')">Valider</button>
       <div class="res" id="res_${slotDef.sid}"></div>
       <div class="why" id="why_${slotDef.sid}" style="display:none"></div>
@@ -3584,8 +3590,8 @@ function validate(L, sid){
   const slotDef=S.slots.find(x=>x.sid===sid);
   if(!slotDef) return false;
 
-  if(slotDef.note){
-    toast('Rappel technique: pas de validation/progression ici.');
+  if(slotDef.trackable===false){
+    toast('Cette information ne nécessite pas de validation.');
     return false;
   }
 
@@ -3606,12 +3612,12 @@ function validate(L, sid){
   // Une séance = un seul pas d'avancement par exercice.
   // Si on revalide après correction, on recalcule depuis la base du début
   // de séance au lieu d'empiler plusieurs avancées.
-  if(!sessionProgressBaselineByVid[v.vid]){
+  if(slotDef.autoProgress!==false && !sessionProgressBaselineByVid[v.vid]){
     sessionProgressBaselineByVid[v.vid] = {
       last: getLast(v.vid, slotDef.baseLoad),
       state: getState(v.vid),
     };
-  } else {
+  } else if(slotDef.autoProgress!==false) {
     const baseline = sessionProgressBaselineByVid[v.vid];
     setLast(v.vid, baseline.last);
     setState(v.vid, baseline.state);
@@ -3619,7 +3625,7 @@ function validate(L, sid){
 
   const load = loadCheck.value;
   const totalReps=toNum(document.getElementById('reps_'+sid)?.value);
-  const eff = getEff(sid);
+  const eff = slotDef.effortOptional ? null : getEff(sid);
 
   const whyBox=document.getElementById('why_'+sid);
 
@@ -3635,10 +3641,10 @@ function validate(L, sid){
 
   const setReps=getSetRepsArray(sid, slotDef.sets);
   const setAnalysis=analyzeSetDistribution(setReps);
-  const rx=decideNext(slotDef, v, totalReps, eff, load, setAnalysis);
-  const recMsg=recordMessage(updatePersonalRecords(v, totalReps, load));
+  const rx=slotDef.autoProgress===false?null:decideNext(slotDef, v, totalReps, eff, load, setAnalysis);
+  const recMsg=slotDef.autoProgress===false?'':recordMessage(updatePersonalRecords(v, totalReps, load));
 
-  setLast(v.vid, {
+  if(rx) setLast(v.vid, {
     performedTs: Date.now(),
     performedLoad: load,
     performedTotalReps: totalReps,
@@ -3652,14 +3658,15 @@ function validate(L, sid){
   });
   exoValidated[sid] = {reps: totalReps, load: load, eff};
 
-  const todayLine = (unit==='reps') ? `${totalReps} reps · ${effLabel(eff)}` : `${totalReps} reps · ${load} ${unit} · ${effLabel(eff)}`;
-  const nextLine  = (unit==='reps') ? `${slotDef.sets}×${rx.nextRPS}` : `${slotDef.sets}×${rx.nextRPS} · ${rx.nextLoad} ${unit}`;
+  const effortLine=eff?` · ${effLabel(eff)}`:'';
+  const todayLine = (unit==='reps') ? `${totalReps} reps${effortLine}` : `${totalReps} reps · ${load} ${unit}${effortLine}`;
+  const nextLine  = rx&&((unit==='reps') ? `${slotDef.sets}×${rx.nextRPS}` : `${slotDef.sets}×${rx.nextRPS} · ${rx.nextLoad} ${unit}`);
 
-  if(res) res.textContent = `Décision : ${rx.action}\nAujourd’hui : ${todayLine}\nProchaine : ${nextLine}`;
+  if(res) res.textContent = rx?`Décision : ${rx.action}\nAujourd’hui : ${todayLine}\nProchaine : ${nextLine}`:`Rappel enregistré\nAujourd’hui : ${todayLine}\nAucune progression automatique.`;
 
   if(whyBox){
     whyBox.style.display='block';
-    const lines = rx.why.slice();
+    const lines = rx?rx.why.slice():['Rappel technique : les performances sont conservées sans modifier les objectifs.'];
     if(recMsg) lines.push(recMsg);
     whyBox.innerHTML = `<b>Pourquoi</b><br>${lines.map(x=>'• '+escapeHtml(x)).join('<br>')}`;
   }
@@ -3753,7 +3760,7 @@ function setGuidedEffort(sid,eff,button){
 }
 function guidedNext(sid){
   syncFocusToCard(sid); syncGuidedLoad(sid);
-  const slots=getActiveProgram()[current.L].slots.filter(x=>!x.note),at=slots.findIndex(x=>x.sid===sid);
+  const slots=getActiveProgram()[current.L].slots.filter(x=>x.trackable!==false),at=slots.findIndex(x=>x.sid===sid);
   const ordered=[...slots.slice(at+1),...slots.slice(0,at+1)];
   const next=ordered.find(x=>!areExerciseSetsComplete(x.sid,x.sets));
   if(!next){toast('Tous les exercices sont renseignés. Tu peux terminer la séance.');return;}
@@ -3762,7 +3769,7 @@ function guidedNext(sid){
 }
 function renderFocus(opts={}){
   if(!current?.L)return;
-  const S=getActiveProgram()[current.L],actives=S.slots.filter(x=>!x.note);
+  const S=getActiveProgram()[current.L],actives=S.slots.filter(x=>x.trackable!==false);
   let next=S.slots.find(x=>x.sid===focusPickSid)||actives.find(x=>!areExerciseSetsComplete(x.sid,x.sets))||actives.at(-1)||S.slots[0];
   // Le choix automatique n'a lieu qu'à l'entrée. Une fois affiché, l'exercice
   // est épinglé jusqu'à l'action explicite « exercice suivant ».
@@ -3774,22 +3781,21 @@ function renderFocus(opts={}){
   const idx=Math.max(1,actives.findIndex(x=>x.sid===next.sid)+1),cardLoad=document.getElementById(`load_${next.sid}`)?.value||'';
   document.getElementById('fTitle').textContent=v.name;
   document.getElementById('fSub').textContent=`Exercice ${idx}/${actives.length} • ${next.muscle}`;
-  if(next.note){
-    document.getElementById('fBody').innerHTML=`<div class="guidedSection"><div class="goal">Rappel technique</div><p>${escapeHtml(next.note)}</p><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><div class="guidedActions"><button class="btn ghost" onclick="openDone()">Terminer la séance</button><button class="btn" onclick="guidedNext('${next.sid}')">Exercice suivant</button></div>`;return;
-  }
   const rows=Array.from({length:next.sets},(_,i)=>{const n=i+1,val=document.getElementById(`setreps_${next.sid}_${n}`)?.value||'',state=focusSetState(val);return `<div class="setRow" data-set="${n}" data-state="${state.name}"><label for="${focusSetInputId(next.sid,n)}">Série ${n}</label><input id="${focusSetInputId(next.sid,n)}" aria-label="Répétitions série ${n}" type="number" min="1" step="1" inputmode="numeric" placeholder="${target}" value="${escapeHtml(val)}" oninput="handleFocusSetRepsInput('${next.sid}',${next.sets})" onfocus="handleFocusSetFocus('${next.sid}',${next.sets})" onblur="handleFocusSetBlur('${next.sid}',${next.sets})" onkeydown="focusNextSetFromInput('${next.sid}',${next.sets},${n},event)"><span class="setState" aria-live="polite">${state.label}</span></div>`}).join('');
-  const ref=last.performedTs?(unit==='reps'?`${last.performedTotalReps} reps`:`${last.performedLoad} ${unit} • ${last.performedTotalReps} reps`):'Aucune référence pour cette variante.';
+  const loggedLast=getLog().slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).flatMap(entry=>entry.items||[]).find(item=>item.vid===v.vid&&item.repsTot>0);
+  const reference=last.performedTs?{load:last.performedLoad,reps:last.performedTotalReps}:loggedLast?{load:loggedLast.load,reps:loggedLast.repsTot}:null;
+  const ref=reference?(unit==='reps'?`${reference.reps} reps`:`${reference.load??'charge non renseignée'} ${unit} • ${reference.reps} reps`):'Aucune référence pour cette variante.';
   const eff=getEff(next.sid),result=document.getElementById(`res_${next.sid}`)?.textContent||'',why=document.getElementById(`why_${next.sid}`)?.innerHTML||'';
   const isValidated=!!exoValidated[next.sid]&&!isExerciseDirty(next.sid);
   document.getElementById('fBody').innerHTML=`
     <div class="guidedScroll">
-    <div class="guidedSection guidedOverview"><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div></div>
+    <div class="guidedSection guidedOverview"><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div>${next.note?`<div class="res">${escapeHtml(next.note)}</div>`:''}</div>
     <div class="guidedSection guidedPrescription"><div class="goal">Objectif • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'<span></span>':`<div><label class="guidedLabel" for="f_load_${next.sid}">Charge (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="0" oninput="syncGuidedLoad('${next.sid}');refreshGuidedPrimary('${next.sid}')"></div>`}</div>
     <div class="guidedSection guidedSets"><h3>Répétitions par série</h3><div class="guidedSetGrid">${rows}</div><span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span></div>
-    <div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort ressenti</b></div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setGuidedEffort('${next.sid}','EASY',this)">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setGuidedEffort('${next.sid}','OK',this)">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setGuidedEffort('${next.sid}','HARD',this)">😤 Dur</button></div>${result?`<div class="guidedResult"><b>Exercice enregistré.</b><br>${escapeHtml(result)}${why?`<details><summary>Voir l’explication</summary>${why}</details>`:''}</div>`:''}</div>
-    <details class="guidedMenu"><summary>••• Plus d’actions</summary><div class="guidedMenuActions"><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer de variante</button><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos</button><button class="btn ghost" onclick="toggleFocus(false)">Voir tous les exercices</button><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div></details>
+    ${next.effortOptional?'':`<div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort ressenti</b></div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setGuidedEffort('${next.sid}','EASY',this)">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setGuidedEffort('${next.sid}','OK',this)">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setGuidedEffort('${next.sid}','HARD',this)">😤 Dur</button></div></div>`}${result?`<div class="guidedResult"><b>Exercice enregistré.</b><br>${escapeHtml(result)}${why?`<details><summary>Voir l’explication</summary>${why}</details>`:''}</div>`:''}
+    <details class="guidedMenu"><summary>••• Plus d’actions</summary><div class="guidedMenuActions"><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer de variante</button><button class="btn ghost" onclick="toggleFocus(false)">Voir tous les exercices</button><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div></details>
     </div>
-    <div class="guidedActionBar"><div id="fError" class="guidedError" role="alert"></div>${isValidated?`<button class="btn guidedPrimary" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:`<button class="btn guidedPrimary" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>`}</div>`;
+    <div class="guidedActionBar"><div id="fError" class="guidedError" role="alert"></div><div class="guidedActionButtons"><button class="btn guidedRestButton" type="button" onclick="startRestForSid('${next.sid}')">Repos · ${escapeHtml(next.rest)}</button>${isValidated?`<button class="btn guidedPrimary" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:`<button class="btn guidedPrimary" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>`}</div></div>`;
   syncFocusSetRows(next.sid,next.sets);
   syncRestTimerHost();
 }
@@ -4018,10 +4024,12 @@ function buildSessionSnapshot(L){
       setReps:did?setReps:[],
       setDropStatus:did?setAnalysis.status:null,
       setDropPct:did?setAnalysis.dropPct:null,
-      eff:(did && !sd.note)?eff:null,
+      eff:(did && !sd.effortOptional)?eff:null,
       nextAction:did && last?.nextAction ? last.nextAction : null,
       nextAdvice:did && Array.isArray(last?.nextAdvice) ? last.nextAdvice.filter(Boolean) : [],
-      note:!!sd.note
+      note:!!sd.note,
+      trackable:sd.trackable!==false,
+      autoProgress:sd.autoProgress!==false
     });
   }
   return items;
@@ -4078,7 +4086,7 @@ function computeLocalFatigue(items){
   const out={};
   for(const it of (items||[])){
     const sets=Number.isFinite(it?.sets) ? it.sets : 0;
-    if(!sets || it?.repsTot==null || it?.note) continue;
+    if(!sets || it?.repsTot==null || (it?.note && it?.trackable!==true)) continue;
     const hard=it.eff==='HARD' ? 1 : 0;
     const excessive=(it.setDropStatus==='excessive') || analyzeSetDistribution(it.setReps||[]).excessive;
     const dist=muscleWeightsForItem(it);
@@ -4720,7 +4728,7 @@ function openDone(){
   const validItems=items.filter(it=>it.repsTot!=null && it.repsTot>0);
   if(!validItems.length){ toast('Aucune série réalisée : brouillon conservé.'); finishingSession=false; return; }
   const vol=computeVolume(items), total=Object.values(vol).reduce((a,b)=>a+b,0);
-  const entry={id:currentSessionId||newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),partial:items.filter(it=>!it.note).some(it=>!HFCore.isCompletedExercise(it)),items,vol,total};
+  const entry={id:currentSessionId||newId(),ts:Date.now(),letter:L,programMode:getProgramMode(),partial:items.filter(it=>it.trackable!==false).some(it=>!HFCore.isCompletedExercise(it)),items,vol,total};
   const result=HFCore.commitSession(localStorage,entry,DRAFT_KEY,LOG_KEY);
   finishingSession=false;
   if(!result.ok){ toast('Échec de l’enregistrement : brouillon conservé.'); return; }

@@ -178,7 +178,7 @@
     for(const item of items||[]){const count=performedSets(item);if(!count)continue;const kind=chargeKind(item.unit);if(kind!=='bodyweight'){const check=validateLoad(item.load,kind);if(!check.ok)return {ok:false,sid:item.sid,error:`${item.name||item.sid} : ${check.error}`};}}
     return {ok:true};
   }
-  function isCompletedExercise(item){return !!item&&!item.note&&performedSets(item)>0&&((item.legacyAggregate&&Number.isInteger(item.performedSets)&&item.performedSets>=item.sets)||(!item.legacyAggregate&&performedSets(item)>=(item.sets||1)));}
+  function isCompletedExercise(item){return !!item&&(!item.note||item.trackable===true)&&performedSets(item)>0&&((item.legacyAggregate&&Number.isInteger(item.performedSets)&&item.performedSets>=item.sets)||(!item.legacyAggregate&&performedSets(item)>=(item.sets||1)));}
   function normalizeSetSlots(values,count){
     return Array.from({length:Math.max(0,Number(count)||0)},(_,i)=>validateReps(values?.[i],{allowEmpty:false}).ok?Number(values[i]):null);
   }

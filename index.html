@@ -56,7 +56,7 @@
     .sbtn{appearance:none;border:1px solid rgba(212,175,55,.28);background:rgba(255,255,255,.03);color:var(--t);padding:8px 10px;border-radius:999px;font-weight:950;cursor:pointer;transition:transform .08s ease,border-color .18s ease,background .18s ease}
     :where(button,input,select,summary,[tabindex]):focus-visible{outline:3px solid #ffd56a;outline-offset:3px}
     :where(input,select){font-size:16px;min-height:44px}
-    :where(.btn,.sbtn,.themeBtn,.programTrigger,.helpBtn){min-height:44px}
+    :where(.btn,.sbtn,.themeBtn,.programTrigger){min-height:44px}
     .sbtn:hover{border-color:rgba(255,213,106,.55);background:rgba(212,175,55,.08)}
     .sbtn:active{transform:translateY(1px) scale(.99)}
     .sbtn.on{border-color:rgba(255,213,106,.75);background:rgba(212,175,55,.14);color:var(--g2)}
@@ -1118,7 +1118,7 @@ body:has(#rt.on) #settings{padding-bottom:clamp(190px,32vh,290px)}
 :root{--gold-solid:#d2a62f;--gold-deep:#9a7113;--space-1:8px;--space-2:16px;--space-3:24px;--radius-card:22px}
 .homeHero{display:grid;gap:12px;margin-bottom:14px;padding:clamp(20px,5vw,34px);border-color:rgba(255,213,106,.35)!important}.homeHero h1{margin:0;font-size:clamp(28px,8vw,42px)}
 .eyebrow{color:var(--g2);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}.homePrimary{margin-top:8px;min-height:54px;font-size:16px;background:linear-gradient(135deg,#f3d879,#c49520)!important;color:#17130a!important;border-color:#f3d879!important}.homeSummary{margin-bottom:18px}.sectionTitle{font-size:17px;margin:22px 2px 12px}
-.onboarding{overflow-y:auto;padding:14px}.onbBox{width:min(680px,100%);margin:auto;padding:clamp(22px,6vw,42px);border-color:rgba(255,213,106,.38)}.onbBox h1{font-size:clamp(28px,8vw,44px);margin:10px 0 18px}.onbSteps{display:flex;gap:8px;margin-bottom:18px}.onbSteps span{height:4px;flex:1;border-radius:9px;background:rgba(255,255,255,.12)}.onbSteps span.on{background:linear-gradient(90deg,#f3d879,#b88918)}.onbLead{font-size:20px;font-weight:850;line-height:1.3}.onbCopy{line-height:1.55;color:var(--m);margin:10px 0 22px}.onbField{display:grid;gap:8px;margin-top:22px}.onbPrograms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.onbProgram{padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.03);color:inherit;text-align:left;cursor:pointer}.onbProgram.selected{border:2px solid var(--g2);background:rgba(212,175,55,.10)}.selectedText{font-weight:900;color:var(--g2);min-height:20px}.programDetails{margin-top:10px;color:var(--m);font-size:12px;line-height:1.5}.onbTips{display:grid;gap:12px}.onbTip{padding:14px;border-left:3px solid var(--gold-solid);background:rgba(212,175,55,.07);border-radius:0 14px 14px 0}.onbError{min-height:22px;color:#ff8f8f;margin-top:10px}.onbActions{position:sticky;bottom:0;padding-top:18px;background:linear-gradient(transparent,var(--bg) 20%)}.helpBtn{padding:5px 9px!important;margin-left:7px!important;font-size:12px!important}.helpText{display:none;margin:8px 0;padding:12px;border-radius:12px;background:rgba(212,175,55,.08);color:var(--m)}.helpText.on{display:block}
+.onboarding{overflow-y:auto;padding:14px}.onbBox{width:min(680px,100%);margin:auto;padding:clamp(22px,6vw,42px);border-color:rgba(255,213,106,.38)}.onbBox h1{font-size:clamp(28px,8vw,44px);margin:10px 0 18px}.onbSteps{display:flex;gap:8px;margin-bottom:18px}.onbSteps span{height:4px;flex:1;border-radius:9px;background:rgba(255,255,255,.12)}.onbSteps span.on{background:linear-gradient(90deg,#f3d879,#b88918)}.onbLead{font-size:20px;font-weight:850;line-height:1.3}.onbCopy{line-height:1.55;color:var(--m);margin:10px 0 22px}.onbField{display:grid;gap:8px;margin-top:22px}.onbPrograms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.onbProgram{padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.03);color:inherit;text-align:left;cursor:pointer}.onbProgram.selected{border:2px solid var(--g2);background:rgba(212,175,55,.10)}.selectedText{font-weight:900;color:var(--g2);min-height:20px}.programDetails{margin-top:10px;color:var(--m);font-size:12px;line-height:1.5}.onbTips{display:grid;gap:12px}.onbTip{padding:14px;border-left:3px solid var(--gold-solid);background:rgba(212,175,55,.07);border-radius:0 14px 14px 0}.onbError{min-height:22px;color:#ff8f8f;margin-top:10px}.onbActions{position:sticky;bottom:0;padding-top:18px;background:linear-gradient(transparent,var(--bg) 20%)}
 body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rgba(255,255,255,.6)}body[data-theme=light] .onbProgram.selected{border-color:#9a7113;background:#fff7dc}body[data-theme=light] .onbSteps span{background:rgba(0,0,0,.12)}body[data-theme=light] .eyebrow,body[data-theme=light] .selectedText{color:#765300}
 @media(max-width:520px){.onbPrograms{grid-template-columns:1fr}.onbActions{display:grid;grid-template-columns:1fr}.onbActions .btn{width:100%;min-height:48px}}
 
@@ -1157,7 +1157,7 @@ body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guided
   .guidedPrescription{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,34%);gap:8px;align-items:end}.guidedPrescription .goal{margin:0;padding:8px;font-size:12px}.guidedPrescription label{margin:0 0 3px;font-size:11px}.guidedPrescription input{min-height:40px;padding:7px 9px;margin:0}
   .guidedSets{display:flex;flex-direction:column}.guidedSets h3{font-size:13px;margin:0 0 4px}.guidedSetGrid{display:grid;grid-template-columns:repeat(var(--set-count,4),minmax(0,1fr));gap:6px;min-height:0}.setRow{display:flex;min-width:0;flex-direction:column;gap:3px;align-items:stretch;padding:5px;border:1px solid var(--v3-stroke);border-left:3px solid transparent;border-radius:12px;text-align:center}.setRow label{font-size:11px;margin:0}.setRow input{width:100%;min-width:0;min-height:42px;padding:6px;text-align:center;font-weight:900}.setRow .setState{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.setRow.active{border-color:var(--g);border-left-color:var(--g)}
   .guidedRest{align-self:center;margin-top:6px;min-height:38px!important;padding:6px 10px!important;font-size:12px}
-  .guidedEffort{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center}.guidedEffortTitle{font-size:12px;white-space:nowrap}.guidedEffort .helpBtn,.guidedEffort .helpText{display:none}.guidedEffort .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0}.guidedEffort .sbtn{min-width:0;min-height:40px;padding:5px 3px;font-size:11px}.guidedEffort>.btn{min-height:40px;padding:7px 9px;font-size:12px}.guidedError{grid-column:1/-1;min-height:0;margin:0;font-size:11px}.guidedResult{grid-column:1/-1;padding:6px 8px;font-size:11px;line-height:1.25;max-height:44px;overflow:hidden;white-space:normal}.guidedResult details{display:none}.guidedNext{grid-column:1/-1;min-height:38px!important;padding:6px 10px!important}
+  .guidedEffort{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center}.guidedEffortTitle{font-size:12px;white-space:nowrap}.guidedEffort .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0}.guidedEffort .sbtn{min-width:0;min-height:40px;padding:5px 3px;font-size:11px}.guidedEffort>.btn{min-height:40px;padding:7px 9px;font-size:12px}.guidedError{grid-column:1/-1;min-height:0;margin:0;font-size:11px}.guidedResult{grid-column:1/-1;padding:6px 8px;font-size:11px;line-height:1.25;max-height:44px;overflow:hidden;white-space:normal}.guidedResult details{display:none}.guidedNext{grid-column:1/-1;min-height:38px!important;padding:6px 10px!important}
   .guidedFinish{padding:6px 0 0;text-align:center}.guidedFinish .btn{min-height:36px;padding:5px 10px;font-size:11px}
 }
 @media(max-width:360px), (max-height:700px){
@@ -1199,13 +1199,44 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
   .guidedOverview{display:block}.guidedOverview .small{display:block;font-size:12px}.guidedOverview p{font-size:14px}
   .guidedPrescription{grid-template-columns:minmax(0,1fr) minmax(120px,38%);gap:10px}.guidedPrescription .goal{font-size:13px;line-height:1.3}.guidedPrescription label{font-size:12px}.guidedPrescription input{font-size:16px;min-height:44px}
   .guidedSets h3{font-size:14px;margin-bottom:7px}.guidedSetGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.setRow{display:grid;grid-template-columns:1fr 70px;grid-template-rows:auto auto;gap:2px 8px;text-align:left;padding:7px 8px;min-height:62px}.setRow label{font-size:13px;align-self:center}.setRow input{grid-column:2;grid-row:1/3;min-height:44px;font-size:16px}.setRow .setState{grid-column:1;font-size:11px;white-space:normal;overflow:visible}
-  .guidedRest{display:none}.guidedEffort{display:block}.guidedEffortTitle{font-size:13px}.guidedEffort .helpBtn{display:inline-flex}.guidedEffort .seg{margin-top:7px}.guidedEffort .sbtn{min-height:44px;font-size:12px}.guidedEffort>.btn{display:none}
+  .guidedRest{display:none}.guidedEffort{display:block}.guidedEffortTitle{font-size:13px}.guidedEffort .seg{margin-top:7px}.guidedEffort .sbtn{min-height:44px;font-size:12px}.guidedEffort>.btn{display:none}
   .guidedFinish{display:none}.guidedMenu{margin-top:7px}.guidedActionBar{padding-top:8px}.guidedPrimary{min-height:50px}
   .focusRestDock>.rt.on{padding:8px;gap:7px;max-height:none;overflow:visible}.focusRestDock .rtL{min-width:0;max-width:none;flex:1}.focusRestDock .rtSets{display:none!important}.focusRestDock .rtC{font-size:19px;min-width:72px;padding:6px}.focusRestDock .rtA{width:auto;margin-left:0;flex-wrap:nowrap;gap:5px}.focusRestDock .rtBtn{padding:6px;min-width:44px;font-size:0}.focusRestDock #rtToggle{font-size:12px}.focusRestDock #rtClose::after{content:'Fermer';font-size:11px}.focusRestDock #rtMinus::after{content:'−15';font-size:11px}.focusRestDock #rtPlus::after{content:'+15';font-size:11px}.focusRestDock #rtReset,.focusRestDock #rtViewBtn,.focusRestDock #rtSoundBtn{display:none}
 }
 @media(max-width:340px){.guidedSetGrid{grid-template-columns:1fr}.guidedMenuActions{grid-template-columns:1fr}}
 @media(max-height:650px) and (orientation:landscape){.guidedSetGrid{grid-template-columns:repeat(3,minmax(120px,1fr))}.guidedScroll{padding-bottom:4px}}
 @media(prefers-reduced-motion:reduce){.rt.done,.rt.done .rtC{animation:none}}
+
+/* Corrections ciblées des commandes, du contraste et de l'historique de séance. */
+.sessionControls{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.sessionControls .btn{min-height:44px;margin:0;white-space:nowrap}
+#lastSessionPanel{margin-top:12px;max-width:100%}
+.lastSessionDetails{display:block;width:100%;padding:0;border:0;background:transparent}
+.lastSessionDetails>summary,.lastSessionEmpty{display:inline-flex;max-width:100%;min-height:44px;align-items:center;gap:10px;padding:9px 13px;border:1px solid rgba(255,213,106,.3);border-radius:999px;background:rgba(212,175,55,.08);color:var(--v3-text);font-weight:900;overflow-wrap:anywhere}
+.lastSessionDetails>summary{list-style:none}.lastSessionDetails>summary::-webkit-details-marker{display:none}
+.lastSessionChevron{width:8px;height:8px;flex:0 0 auto;border-right:2px solid var(--g2);border-bottom:2px solid var(--g2);transform:rotate(45deg) translateY(-2px);transition:transform .16s ease}
+.lastSessionDetails[open] .lastSessionChevron{transform:rotate(225deg) translate(-2px,-2px)}
+.lastSessionContent{margin-top:8px;padding:12px;border:1px solid rgba(212,175,55,.22);border-radius:16px;background:var(--v3-card);overflow-wrap:anywhere}
+.lastSessionTable{margin-top:8px;max-width:100%;overflow:hidden}.lastSessionTable table{table-layout:fixed;margin-top:0}.lastSessionTable td{overflow-wrap:anywhere;word-break:break-word}
+.focus{background:#080808;backdrop-filter:none}
+.focusBox{background:#0d0d0d!important}
+.focus .guidedPrimary,.focus .guidedPrimary:hover{background:#17130a!important;border:1px solid #d2a62f!important;color:#f3d879!important;box-shadow:0 8px 24px rgba(0,0,0,.35)!important}
+.focus .guidedPrimary:active{background:#2a210d!important;color:#ffe49a!important;transform:translateY(1px)}
+.focus .guidedPrimary:focus-visible{outline:3px solid #ffd56a!important;outline-offset:3px}
+.focus .guidedPrimary:disabled{background:#151515!important;border-color:#76632d!important;color:#b7a775!important;opacity:1;cursor:wait;box-shadow:none!important}
+body[data-theme=light] .focus{background:#f5f5f7}
+body[data-theme=light] .focusBox{background:#f5f5f7!important;color:var(--v3-text)}
+body[data-theme=light] .focus .guidedPrimary,body[data-theme=light] .focus .guidedPrimary:hover{background:#282113!important;border-color:#9a7113!important;color:#ffe69a!important}
+body[data-theme=light] .focus .guidedPrimary:active{background:#17130a!important;color:#fff0bc!important}
+body[data-theme=light] .focus .guidedPrimary:disabled{background:#dad7cf!important;border-color:#998b68!important;color:#5e543c!important}
+@media(max-width:600px){
+  .sessionControls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:7px}
+  .sessionControls .btn{min-width:0;padding:8px 7px;font-size:13px}
+  .lastSessionContent{padding:10px}.lastSessionTable table,.lastSessionTable tbody,.lastSessionTable tr,.lastSessionTable td{display:block}.lastSessionTable thead{display:none}.lastSessionTable tr{padding:7px 0;border-bottom:1px solid var(--v3-line)}.lastSessionTable tr:last-child{border-bottom:0}.lastSessionTable td{width:auto!important;padding:3px 0;border:0}
+}
+@media(max-width:340px){
+  .sessionControls{grid-template-columns:repeat(2,minmax(0,1fr))}.sessionControls .btn:last-child{grid-column:1/-1}
+}
 </style>
 </head>
 <body>
@@ -1253,13 +1284,13 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
         <div class="small" id="sessMeta" style="margin-top:4px">—</div>
         <div class="hybridContext" id="hybridSessionContext" style="display:none">Programme Hybride : adapte l’ordre de tes séances selon tes sorties course.</div>
       </div>
-      <div class="row">
+      <div class="sessionControls" aria-label="Commandes de la séance">
         <button class="btn ghost" type="button" onclick="goHome()">Menu</button>
-        <button class="btn ghost" type="button" id="focusBtn">Vue guidée</button>
-        <button class="btn" type="button" id="btnDone">Terminer • Enregistrer dans l’historique</button>
+        <button class="btn ghost" type="button" id="focusBtn">Mode focus</button>
+        <button class="btn" type="button" id="btnDone" aria-label="Terminer et enregistrer dans l’historique">Terminer</button>
       </div>
     </div>
-    <div class="panel" id="lastSessionPanel" style="margin-top:12px"></div>
+    <div id="lastSessionPanel"></div>
     <div id="exoList"></div>
     <div style="margin:20px 0;text-align:center">
       <div class="small" style="margin-bottom:8px;color:rgba(255,213,106,.95)">
@@ -1423,7 +1454,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
       <div class="focusHeadMain">
         <div class="boxI">🎯</div>
         <div class="focusHeading">
-          <div class="boxT" id="fTitle">Vue guidée</div>
+          <div class="boxT" id="fTitle">Mode focus</div>
           <div class="small" id="fSub">—</div>
         </div>
       </div>
@@ -3393,19 +3424,18 @@ function exoCard(L, slotDef){
     ${nextAdviceBox}
 
     ${unit==='reps' ? `` : `
-    <label>Charge utilisée aujourd’hui (${unit}) <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_load_${slotDef.sid}')">Aide charge</button>
-      <div class="helpText" id="help_load_${slotDef.sid}">${chargeHelp(unit)}</div>
+    <label>Charge utilisée aujourd’hui (${unit})
       <input id="load_${slotDef.sid}" type="number" min="0" step="any" value="" inputmode="decimal"/>
       ${loadHint ? `<div class="small loadHint">${escapeHtml(loadHint)}</div>` : ``}
     </label>`}
 
-    <label>Répétitions par série (${slotDef.sets} séries) <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_reps_${slotDef.sid}')">Aide répétitions</button></label><div class="helpText" id="help_reps_${slotDef.sid}">Note ce que tu as réellement fait pour chaque série.</div>
+    <label>Répétitions par série (${slotDef.sets} séries)</label>
     <div class="setGrid">${setInputs}</div>
     <div class="small" style="margin-top:8px">Total calculé automatiquement : <b id="repsTotView_${slotDef.sid}">0</b> reps</div>
     <input id="reps_${slotDef.sid}" type="hidden" value="0"/>
 
     ${slotDef.note?`<div class="res">${escapeHtml(slotDef.note)}</div>`:`
-      <div><b>Effort</b> <button class="btn ghost helpBtn" type="button" aria-expanded="false" onclick="toggleFieldHelp(this,'help_eff_${slotDef.sid}')">Aide effort</button></div><div class="helpText" id="help_eff_${slotDef.sid}">Choisis Facile, OK ou Dur. Ce ressenti participe à la recommandation suivante.</div>
+      <div><b>Effort</b></div>
       <div class="seg" id="seg_${slotDef.sid}">
         <button class="sbtn" data-eff="EASY" type="button" onclick="setEff('${slotDef.sid}','EASY')">😌 Facile</button>
         <button class="sbtn" data-eff="OK" type="button" onclick="setEff('${slotDef.sid}','OK')">🙂 OK</button>
@@ -3418,9 +3448,6 @@ function exoCard(L, slotDef){
     `}
   </div>`;
 }
-
-function chargeHelp(unit){if(unit==='kg par haltère')return 'Indique les kilogrammes pour un haltère.';if(unit==='lest (kg)')return 'Indique les kilogrammes de lest ajouté.';if(unit==='kg (assistance)')return 'Indique les kilogrammes d’assistance. Une assistance plus élevée facilite le mouvement.';return 'Indique la charge totale en kilogrammes.';}
-function toggleFieldHelp(button,id){const box=document.getElementById(id),open=!box.classList.contains('on');box.classList.toggle('on',open);button.setAttribute('aria-expanded',String(open));}
 
 function renderSession(L, opts={}){
   const S=getActiveProgram()[L];
@@ -3505,13 +3532,13 @@ function spreadTotalRepsToSets(sid, sets, total){
 function renderLastSession(L){
   const host=document.getElementById('lastSessionPanel');
   if(!host) return;
+  const panelKey=`${getProgramMode()}:${L}:${currentSessionId||''}`;
+  const wasOpen=host.dataset.sessionKey===panelKey && host.querySelector('details')?.open;
+  host.dataset.sessionKey=panelKey;
   const log=getLog().slice().sort((a,b)=>b.ts-a.ts);
   const entry=HFCore.latestSession(log,L,getProgramMode());
   if(!entry){
-    host.innerHTML = `
-      <div style="font-weight:950">Dernière séance enregistrée</div>
-      <div class="small muted" style="margin-top:6px">Aucun historique pour cette séance pour le moment.</div>
-    `;
+    host.innerHTML = `<div class="lastSessionEmpty" role="status">Aucune séance enregistrée</div>`;
     return;
   }
 
@@ -3535,14 +3562,17 @@ function renderLastSession(L){
   }).join('');
 
   host.innerHTML = `
-    <div style="font-weight:950">Dernière séance enregistrée</div>
-    <div class="small" style="margin-top:6px">${title} <span class="muted">• ${escapeHtml(volTxt)}</span></div>
-    <div style="overflow:auto;margin-top:10px">
+    <details class="lastSessionDetails" ${wasOpen?'open':''}>
+      <summary>Dernière séance enregistrée <span class="lastSessionChevron" aria-hidden="true"></span></summary>
+      <div class="lastSessionContent">
+      <div class="small">${title} <span class="muted">• ${escapeHtml(volTxt)}</span></div>
+      <div class="lastSessionTable">
       <table>
         <thead><tr><th>Exercice</th><th>Résultat</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>
+      </div></div>
+    </details>
   `;
 }
 
@@ -3658,11 +3688,14 @@ function openFocusForSid(sid){
 // Focus mode
 // ============================
 function toggleFocus(on){
-  focusOn=!!on;
+  const next=!!on;
+  if(next===focusOn) return;
+  focusOn=next;
   const el=document.getElementById('focus');
   el.classList.toggle('on',focusOn);
   // ✅ On NE ferme PLUS le chrono en quittant le focus
-  if(focusOn) renderFocus();
+  if(focusOn){ lockPageForFocus(); renderFocus(); }
+  else unlockPageForFocus();
   syncRestTimerHost();
   rtApplyView();
   if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
@@ -3675,6 +3708,22 @@ function syncGuidedLoad(sid){
   if(current?.L) saveDraft(current.L,buildSessionSnapshot(current.L));
 }
 let guidedValidationPending=false;
+let focusScrollLock=null;
+function lockPageForFocus(){
+  if(focusScrollLock) return;
+  const x=window.scrollX,y=window.scrollY,body=document.body;
+  focusScrollLock={x,y,styles:{position:body.style.position,top:body.style.top,left:body.style.left,width:body.style.width,overflow:body.style.overflow}};
+  Object.assign(body.style,{position:'fixed',top:`-${y}px`,left:`-${x}px`,width:'100%',overflow:'hidden'});
+  body.classList.add('focusScrollLocked');
+}
+function unlockPageForFocus(){
+  if(!focusScrollLock) return;
+  const {x,y,styles}=focusScrollLock;
+  focusScrollLock=null;
+  Object.assign(document.body.style,styles);
+  document.body.classList.remove('focusScrollLocked');
+  window.scrollTo(x,y);
+}
 function guidedValidate(sid){
   if(guidedValidationPending) return;
   guidedValidationPending=true;
@@ -3737,7 +3786,7 @@ function renderFocus(opts={}){
     <div class="guidedSection guidedOverview"><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div></div>
     <div class="guidedSection guidedPrescription"><div class="goal">Objectif • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'<span></span>':`<div><label class="guidedLabel" for="f_load_${next.sid}">Charge (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="0" oninput="syncGuidedLoad('${next.sid}');refreshGuidedPrimary('${next.sid}')"></div>`}</div>
     <div class="guidedSection guidedSets"><h3>Répétitions par série</h3><div class="guidedSetGrid">${rows}</div><span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span></div>
-    <div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort ressenti</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setGuidedEffort('${next.sid}','EASY',this)">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setGuidedEffort('${next.sid}','OK',this)">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setGuidedEffort('${next.sid}','HARD',this)">😤 Dur</button></div>${result?`<div class="guidedResult"><b>Exercice enregistré.</b><br>${escapeHtml(result)}${why?`<details><summary>Voir l’explication</summary>${why}</details>`:''}</div>`:''}</div>
+    <div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort ressenti</b></div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setGuidedEffort('${next.sid}','EASY',this)">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setGuidedEffort('${next.sid}','OK',this)">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setGuidedEffort('${next.sid}','HARD',this)">😤 Dur</button></div>${result?`<div class="guidedResult"><b>Exercice enregistré.</b><br>${escapeHtml(result)}${why?`<details><summary>Voir l’explication</summary>${why}</details>`:''}</div>`:''}</div>
     <details class="guidedMenu"><summary>••• Plus d’actions</summary><div class="guidedMenuActions"><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer de variante</button><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos</button><button class="btn ghost" onclick="toggleFocus(false)">Voir tous les exercices</button><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div></details>
     </div>
     <div class="guidedActionBar"><div id="fError" class="guidedError" role="alert"></div>${isValidated?`<button class="btn guidedPrimary" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:`<button class="btn guidedPrimary" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>`}</div>`;

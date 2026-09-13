@@ -53,7 +53,7 @@ try{
     await run.page.click('.onbProgram:has-text("Musculation")');
     await run.page.click('#onbN');
     await run.page.waitForSelector('#sess.on');
-    if(await run.page.locator('#focus').evaluate(el=>el.classList.contains('on')))throw Error('Vue guidée ouverte automatiquement');
+    if(await run.page.locator('#focus').evaluate(el=>el.classList.contains('on')))throw Error('Mode focus ouvert automatiquement');
     await run.page.click('#focusBtn');
     await run.page.waitForSelector('#focus.on');
     if(await run.page.evaluate(()=>localStorage.getItem('aurafarm_program_mode_v1'))!=='strength')throw Error('Programme non persisté');

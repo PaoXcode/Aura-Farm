@@ -1191,7 +1191,12 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 .setRow[data-state=valid]{border-color:rgba(95,190,130,.45);background:rgba(70,170,110,.07)}
 .setRow[data-state=invalid]{border-color:#e26f67;background:rgba(226,111,103,.08)}
 .focusRestDock:empty{display:none}
-.focusRestDock>.rt.on{position:static;transform:none;width:100%;display:flex;margin-top:8px;box-shadow:none;background:rgba(212,175,55,.07);z-index:auto}
+.focusRestDock{flex:0 0 auto;min-width:0}
+.focusRestDock>.rt.on{position:static;transform:none;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;margin-top:8px;box-shadow:none;background:rgba(212,175,55,.09);z-index:auto;overflow:visible}
+.focusRestDock .rtL{min-width:0;max-width:none}
+.focusRestDock .rtC{grid-column:2;grid-row:1;align-self:center}
+.focusRestDock .rtA{grid-column:1/-1;grid-row:2;width:100%;margin:0;display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px}
+.focusRestDock .rtBtn{width:100%;min-width:44px;min-height:44px}
 .focusRestDock .rtHint,.focusRestDock .rtViewBtn{display:none}
 
 @media(max-width:600px){
@@ -1204,7 +1209,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
   .guidedSets h3{font-size:14px;margin-bottom:7px}.guidedSetGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.setRow{display:grid;grid-template-columns:1fr 70px;grid-template-rows:auto auto;gap:2px 8px;text-align:left;padding:7px 8px;min-height:62px}.setRow label{font-size:13px;align-self:center}.setRow input{grid-column:2;grid-row:1/3;min-height:44px;font-size:16px}.setRow .setState{grid-column:1;font-size:11px;white-space:normal;overflow:visible}
   .guidedRest{display:none}.guidedEffort{display:block}.guidedEffortTitle{font-size:13px}.guidedEffort .seg{margin-top:7px}.guidedEffort .sbtn{min-height:44px;font-size:12px}.guidedEffort>.btn{display:none}
   .guidedFinish{display:none}.guidedMenu{margin-top:7px}.guidedActionBar{padding-top:8px}.guidedPrimary{min-height:50px}
-  .focusRestDock>.rt.on{padding:8px;gap:7px;max-height:none;overflow:visible}.focusRestDock .rtL{min-width:0;max-width:none;flex:1}.focusRestDock .rtSets{display:none!important}.focusRestDock .rtC{font-size:19px;min-width:72px;padding:6px}.focusRestDock .rtA{width:auto;margin-left:0;flex-wrap:nowrap;gap:5px}.focusRestDock .rtBtn{padding:6px;min-width:44px;font-size:0}.focusRestDock #rtToggle{font-size:12px}.focusRestDock #rtClose::after{content:'Fermer';font-size:11px}.focusRestDock #rtMinus::after{content:'−15';font-size:11px}.focusRestDock #rtPlus::after{content:'+15';font-size:11px}.focusRestDock #rtReset,.focusRestDock #rtViewBtn,.focusRestDock #rtSoundBtn{display:none}
+  .focusRestDock>.rt.on{padding:8px;gap:7px;max-height:none}.focusRestDock .rtSets{display:none!important}.focusRestDock .rtC{font-size:20px;min-width:76px;padding:7px}.focusRestDock .rtA{gap:5px}.focusRestDock .rtBtn{padding:6px;font-size:12px}.focusRestDock .rtIcon{font-size:15px}.focusRestDock #rtReset,.focusRestDock #rtViewBtn,.focusRestDock #rtSoundBtn{display:none}
 }
 @media(max-width:340px){.guidedSetGrid{grid-template-columns:1fr}.guidedMenuActions{grid-template-columns:1fr}}
 @media(max-height:650px) and (orientation:landscape){.guidedSetGrid{grid-template-columns:repeat(3,minmax(120px,1fr))}.guidedScroll{padding-bottom:4px}}
@@ -1223,6 +1228,31 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 .lastSessionTable{margin-top:8px;max-width:100%;overflow:hidden}.lastSessionTable table{table-layout:fixed;margin-top:0}.lastSessionTable td{overflow-wrap:anywhere;word-break:break-word}
 .focus{background:#080808;backdrop-filter:none}
 .focusBox{background:#0d0d0d!important}
+
+/* Repos compact : une en-tête lisible et une barre de commandes stable. */
+.rt{background:#10100f;backdrop-filter:none;display:none;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.rt.on{display:grid}
+.rt .rtL{grid-column:1;grid-row:1;min-width:0;max-width:none}
+.rt .rtC{grid-column:2;grid-row:1}
+.rt .rtA{grid-column:1/-1;grid-row:2;width:100%;margin:0;display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px}
+.rt .rtBtn{min-width:44px;min-height:44px;padding:6px 3px;display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
+.rt .rtIcon{font-size:17px;line-height:1}.rt .rtBtnLabel{font-size:12px;font-weight:900}.rt #rtToggle{border-color:#f3d879;box-shadow:inset 0 0 0 1px rgba(243,216,121,.28)}
+.rt .rtHintMode{display:none}.rt .rtHint{margin-top:4px}.rt .rtSets{margin-top:4px;gap:4px}.rt .rtSetBtn{width:32px;height:32px;border-radius:9px}
+.rt .rtT::before{content:'⏱';margin-right:6px;font-size:16px}
+body.rt_full>.rt.on{display:flex}
+.guidedRestIcon{font-size:18px;margin-right:6px;vertical-align:-1px}
+@media(max-width:600px){
+  body:not(.rt_full)>.rt{width:calc(100vw - 16px);padding:9px 8px calc(9px + env(safe-area-inset-bottom,0px));gap:7px}
+  body:not(.rt_full)>.rt .rtS{max-width:calc(100vw - 126px)}
+  body:has(>.rt.on):not(.rt_full) .wrap{padding-bottom:190px!important}
+}
+@media(max-width:350px),(min-resolution:1dppx) and (max-width:380px) and (prefers-contrast:more){
+  body:not(.rt_full)>.rt .rtA{grid-template-columns:repeat(4,minmax(44px,1fr))}
+}
+@media(max-height:520px) and (orientation:landscape){
+  .focusBox{height:100dvh;max-height:100dvh}.guidedScroll{overflow-y:auto;overscroll-behavior:contain}
+  .focusRestDock>.rt.on{margin-top:4px;padding:6px}.focusRestDock .rtBtn{min-height:44px}
+}
 .focus .guidedPrimary,.focus .guidedPrimary:hover{background:#17130a!important;border:1px solid #d2a62f!important;color:#f3d879!important;box-shadow:0 8px 24px rgba(0,0,0,.35)!important}
 .focus .guidedPrimary:active{background:#2a210d!important;color:#ffe49a!important;transform:translateY(1px)}
 .focus .guidedPrimary:focus-visible{outline:3px solid #ffd56a!important;outline-offset:3px}
@@ -1583,13 +1613,13 @@ body[data-theme=light] .focus .guidedPrimary:disabled{background:#dad7cf!importa
   </div>
   <div class="rtC" id="rtClock">00:00</div>
   <div class="rtA">
-    <button class="btn ghost rtBtn" id="rtMinus" type="button" aria-label="Retirer 15 secondes" onclick="rtAdd(-15)">-15s</button>
-    <button class="btn rtBtn" type="button" id="rtToggle" onclick="rtToggle()">Start</button>
-    <button class="btn ghost rtBtn" id="rtPlus" type="button" aria-label="Ajouter 15 secondes" onclick="rtAdd(15)">+15s</button>
-    <button class="btn ghost rtBtn" id="rtReset" type="button" onclick="rtReset()">Reset</button>
-    <button class="btn ghost rtBtn" type="button" id="rtViewBtn" onclick="rtToggleView()">Compact</button>
-    <button class="btn ghost rtBtn" type="button" id="rtSoundBtn" onclick="rtToggleSound()">🔊</button>
-<button class="btn ghost rtBtn" id="rtClose" type="button" aria-label="Fermer le chronomètre" onclick="rtClose()">✕</button> <!-- ✅ close -->
+    <button class="btn ghost rtBtn" id="rtMinus" type="button" aria-label="Retirer 15 secondes" onclick="rtAdd(-15)"><span class="rtBtnLabel">−15 s</span></button>
+    <button class="btn rtBtn" type="button" id="rtToggle" onclick="rtToggle()"><span class="rtIcon" aria-hidden="true">▶</span><span class="rtBtnLabel">Démarrer</span></button>
+    <button class="btn ghost rtBtn" id="rtPlus" type="button" aria-label="Ajouter 15 secondes" onclick="rtAdd(15)"><span class="rtBtnLabel">+15 s</span></button>
+    <button class="btn ghost rtBtn" id="rtReset" type="button" aria-label="Réinitialiser le chronomètre" title="Réinitialiser" onclick="rtReset()"><span class="rtIcon" aria-hidden="true">↺</span></button>
+    <button class="btn ghost rtBtn rtViewBtn" type="button" id="rtViewBtn" aria-label="Passer en mode compact" onclick="rtToggleView()"><span class="rtIcon" aria-hidden="true">⛶</span></button>
+    <button class="btn ghost rtBtn" type="button" id="rtSoundBtn" aria-label="Désactiver le son" onclick="rtToggleSound()"><span class="rtIcon" aria-hidden="true">🔊</span></button>
+    <button class="btn ghost rtBtn" id="rtClose" type="button" aria-label="Fermer le chronomètre" title="Fermer" onclick="rtClose()"><span class="rtIcon" aria-hidden="true">✕</span></button>
   </div>
 </div>
 
@@ -2185,13 +2215,13 @@ function rtUpdateViewUI(){
   const b = document.getElementById('rtViewBtn');
   const hint = document.getElementById('rtHintMode');
   if(b){
-    b.textContent = rtState.fullscreen ? 'Compact' : 'Plein écran';
+    b.setAttribute('aria-label', rtState.fullscreen ? 'Passer en mode compact' : 'Passer en plein écran');
     b.title = rtState.fullscreen ? 'Passer en mode compact' : 'Passer en plein écran';
   }
   if(hint){
     hint.textContent = rtState.fullscreen
       ? 'Mode plein écran actif.'
-      : 'Mode compact actif : la séance reste visible.';
+      : '';
   }
 }
 function rtPersist(){
@@ -2374,7 +2404,11 @@ function rtRender(){
   if(t) t.textContent = rtState.title || 'Repos';
   if(s) s.textContent = rtState.sub || '—';
   if(c) c.textContent = rtFmt(rtState.remainSec);
-  if(b) b.textContent = rtState.running ? 'Pause' : 'Start';
+  if(b){
+    b.querySelector('.rtIcon').textContent = rtState.running ? 'Ⅱ' : '▶';
+    b.querySelector('.rtBtnLabel').textContent = rtState.running ? 'Pause' : 'Reprendre';
+    b.setAttribute('aria-label', rtState.running ? 'Mettre le chronomètre en pause' : 'Reprendre le chronomètre');
+  }
   rtRenderSets();
   rtUpdateSoundUI(); // ✅
   rtUpdateViewUI();
@@ -2548,8 +2582,9 @@ function rtUpdateSoundUI(){
   const b = document.getElementById('rtSoundBtn');
   if(!b) return;
   const on = rtGetSound();
-  b.textContent = on ? '🔊' : '🔇';
+  b.querySelector('.rtIcon').textContent = on ? '🔊' : '🔇';
   b.title = on ? 'Son activé' : 'Son désactivé';
+  b.setAttribute('aria-label', on ? 'Désactiver le son' : 'Activer le son');
   b.classList.toggle('on', on);
 }
 function rtToggleSound(){
@@ -3795,7 +3830,7 @@ function renderFocus(opts={}){
     ${next.effortOptional?'':`<div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort ressenti</b></div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setGuidedEffort('${next.sid}','EASY',this)">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setGuidedEffort('${next.sid}','OK',this)">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setGuidedEffort('${next.sid}','HARD',this)">😤 Dur</button></div></div>`}${result?`<div class="guidedResult"><b>Exercice enregistré.</b><br>${escapeHtml(result)}${why?`<details><summary>Voir l’explication</summary>${why}</details>`:''}</div>`:''}
     <details class="guidedMenu"><summary>••• Plus d’actions</summary><div class="guidedMenuActions"><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer de variante</button><button class="btn ghost" onclick="toggleFocus(false)">Voir tous les exercices</button><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div></details>
     </div>
-    <div class="guidedActionBar"><div id="fError" class="guidedError" role="alert"></div><div class="guidedActionButtons"><button class="btn guidedRestButton" type="button" onclick="startRestForSid('${next.sid}')">Repos · ${escapeHtml(next.rest)}</button>${isValidated?`<button class="btn guidedPrimary" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:`<button class="btn guidedPrimary" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>`}</div></div>`;
+    <div class="guidedActionBar"><div id="fError" class="guidedError" role="alert"></div><div class="guidedActionButtons"><button class="btn guidedRestButton" type="button" onclick="startRestForSid('${next.sid}')"><span class="guidedRestIcon" aria-hidden="true">⏱</span>Repos <span class="guidedRestDuration">· ${escapeHtml(next.rest)}</span></button>${isValidated?`<button class="btn guidedPrimary" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:`<button class="btn guidedPrimary" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>`}</div></div>`;
   syncFocusSetRows(next.sid,next.sets);
   syncRestTimerHost();
 }

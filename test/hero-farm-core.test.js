@@ -299,3 +299,10 @@ test('échec d’écriture: correction et suppression ne produisent aucune mutat
 test('consultation et filtres ne mutent ni journal ni brouillon',()=>{
   const log=[entry()],before=JSON.stringify(log),draft={items:[item()]};core.exerciseVariants(log);core.exerciseResults(log,'decline_machine::unit::kg');core.filterSessions(log,{program:'strength'});core.paginate(log);assert.equal(JSON.stringify(log),before);assert.deepEqual(draft,{items:[item()]});
 });
+
+test('un rappel explicitement saisissable compte comme exercice sans changer les anciens rappels', () => {
+  const performed={sets:2,setReps:[10,9],repsTot:19,note:true,trackable:true};
+  assert.equal(core.isCompletedExercise(performed),true);
+  assert.equal(core.sessionSummary({items:[performed]}).completed,1);
+  assert.equal(core.isCompletedExercise({...performed,trackable:undefined}),false);
+});

@@ -23,6 +23,21 @@ test('le focus possède un contraste dédié et un verrouillage réentrant', () 
   assert.match(html, /guidedScroll[^}]*overflow-y:auto/);
 });
 
+test('le repos essentiel est visible dans la barre stable et protège le chrono actif', () => {
+  assert.match(html, /guidedActionBar[\s\S]*guidedRestButton[\s\S]*Repos · \$\{escapeHtml\(next\.rest\)\}/);
+  const menu = html.match(/<details class="guidedMenu"[\s\S]*?<\/details>/)?.[0] || '';
+  assert.doesNotMatch(menu, /Lancer le repos/);
+  assert.match(html, /function startRestForSid\(sid\)[\s\S]*if\(rtState\.running\)\{ rtShow\(true\); syncRestTimerHost\(\); return; \}/);
+});
+
+test('C1 est un rappel saisissable sans effort ni progression automatique', () => {
+  assert.match(html, /sid:'C1'[\s\S]*?sets:2,lo:8,hi:12,rest:'2 min'[\s\S]*?trackable:true,autoProgress:false,effortOptional:true/);
+  assert.match(html, /actives=S\.slots\.filter\(x=>x\.trackable!==false\)/);
+  assert.doesNotMatch(html, /if\(next\.note\)[\s\S]*simple fiche/);
+  assert.match(html, /eff:\(did && !sd\.effortOptional\)\?eff:null/);
+  assert.match(html, /slotDef\.autoProgress===false\?null:decideNext/);
+});
+
 test('la dernière séance utilise un détail accessible sans faux chevron à vide', () => {
   assert.match(html, /<details class="lastSessionDetails"/);
   assert.match(html, /<summary>Dernière séance enregistrée/);

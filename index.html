@@ -1142,6 +1142,28 @@ body[data-theme=light] .onbProgram{border-color:rgba(29,29,31,.16);background:rg
 @media(max-width:390px){.focusBox{padding:15px;border-radius:22px}.setRow{grid-template-columns:1fr 92px}.setState{grid-column:1/-1}.guidedActions .btn{width:100%}}
 body[data-theme=light] .guidedError{color:#9b1c16}body[data-theme=light] .guidedEffort .sbtn.on{color:#17120a}
 
+/* Le focus mobile est un tableau de bord, pas une longue fiche. Chaque zone
+   utile reste visible et la hauteur dynamique tient compte des barres iOS. */
+@media(max-width:600px){
+  body:has(#focus.on){overflow:hidden}
+  .focus{inset:0;overflow:hidden;padding:0;align-items:stretch;background:var(--v3-bg)}
+  .focusBox{width:100%;height:100vh;height:100dvh;max-width:none;margin:0;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));border:0!important;border-radius:0!important;box-shadow:none;display:flex;flex-direction:column;overflow:hidden}
+  .focusHead{flex:0 0 auto;min-height:48px;padding-bottom:8px;border-bottom:1px solid var(--v3-line,rgba(255,213,106,.18))}
+  .focusHead .boxI{width:36px;height:36px;border-radius:12px}.focusHead .boxT{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48vw}.focusHead .small{font-size:11px}
+  .focusHead>.btn{font-size:12px;min-height:40px;padding:7px 10px}
+  #fBody.guidedBody{flex:1;min-height:0;margin-top:0!important;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto auto;align-content:stretch}
+  .guidedSection{min-height:0;padding:7px 0}.guidedSection p{margin:3px 0}.guidedSection .small{font-size:11px;line-height:1.2}
+  .guidedOverview{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}.guidedOverview .guidedTopActions{grid-row:1/3;grid-column:2}.guidedOverview .guidedTopActions .btn{min-height:38px;padding:6px 9px;font-size:12px}.guidedOverview .guidedTopActions .btn:first-child{display:none}
+  .guidedPrescription{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,34%);gap:8px;align-items:end}.guidedPrescription .goal{margin:0;padding:8px;font-size:12px}.guidedPrescription label{margin:0 0 3px;font-size:11px}.guidedPrescription input{min-height:40px;padding:7px 9px;margin:0}
+  .guidedSets{display:flex;flex-direction:column}.guidedSets h3{font-size:13px;margin:0 0 4px}.guidedSetGrid{display:grid;grid-template-columns:repeat(var(--set-count,4),minmax(0,1fr));gap:6px;min-height:0}.setRow{display:flex;min-width:0;flex-direction:column;gap:3px;align-items:stretch;padding:5px;border:1px solid var(--v3-stroke);border-left:3px solid transparent;border-radius:12px;text-align:center}.setRow label{font-size:11px;margin:0}.setRow input{width:100%;min-width:0;min-height:42px;padding:6px;text-align:center;font-weight:900}.setRow .setState{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.setRow.active{border-color:var(--g);border-left-color:var(--g)}
+  .guidedRest{align-self:center;margin-top:6px;min-height:38px!important;padding:6px 10px!important;font-size:12px}
+  .guidedEffort{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center}.guidedEffortTitle{font-size:12px;white-space:nowrap}.guidedEffort .helpBtn,.guidedEffort .helpText{display:none}.guidedEffort .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0}.guidedEffort .sbtn{min-width:0;min-height:40px;padding:5px 3px;font-size:11px}.guidedEffort>.btn{min-height:40px;padding:7px 9px;font-size:12px}.guidedError{grid-column:1/-1;min-height:0;margin:0;font-size:11px}.guidedResult{grid-column:1/-1;padding:6px 8px;font-size:11px;line-height:1.25;max-height:44px;overflow:hidden;white-space:normal}.guidedResult details{display:none}.guidedNext{grid-column:1/-1;min-height:38px!important;padding:6px 10px!important}
+  .guidedFinish{padding:6px 0 0;text-align:center}.guidedFinish .btn{min-height:36px;padding:5px 10px;font-size:11px}
+}
+@media(max-width:360px), (max-height:700px){
+  .focusHead{min-height:42px}.focusHead .boxI{display:none}.focusHead .boxT{font-size:15px}.guidedSection{padding:5px 0}.guidedOverview .small{display:none}.guidedPrescription .goal{padding:6px}.setRow{padding:3px}.setRow input{min-height:38px}.guidedRest{margin-top:4px}.guidedFinish{padding-top:3px}
+}
+
 .progressTabs{display:flex;gap:8px;margin:14px 0;position:sticky;top:0;z-index:2;padding:6px;background:color-mix(in srgb,var(--v3-bg) 88%,transparent);border-radius:16px}.progressTabs .on{border-color:var(--g);box-shadow:inset 0 0 0 1px var(--g)}
 .progressControls,.progressFilters{display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px}.progressControls label,.progressFilters label{margin:0}.progressControls select,.progressFilters select{margin-top:6px}
 .progressHero{margin-top:12px}.metricSwitch{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.chartWrap{overflow:hidden}.progressChart{width:100%;height:auto;display:block}.chartPoint{cursor:pointer}.chartPoint:focus{outline:3px solid var(--v3-accent)}
@@ -1372,7 +1394,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
       </div>
       <button class="btn" type="button" onclick="toggleFocus(false)">Tous les exercices</button>
     </div>
-    <div id="fBody" style="margin-top:12px"></div>
+    <div id="fBody" class="guidedBody" style="margin-top:12px"></div>
   </div>
 </div>
 
@@ -3626,11 +3648,11 @@ function renderFocus(opts={}){
   const ref=last.performedTs?(unit==='reps'?`${last.performedTotalReps} reps`:`${last.performedLoad} ${unit} • ${last.performedTotalReps} reps`):'Aucune référence pour cette variante.';
   const eff=getEff(next.sid),result=document.getElementById(`res_${next.sid}`)?.textContent||'',why=document.getElementById(`why_${next.sid}`)?.innerHTML||'';
   document.getElementById('fBody').innerHTML=`
-    <div class="guidedSection"><div class="guidedTopActions"><button class="btn ghost" onclick="toggleFocus(false)">Tous les exercices</button><button class="btn ghost" onclick="openSwap('${next.sid}')">Changer l’exercice</button></div><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div></div>
-    <div class="guidedSection"><div class="goal">Recommandation • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'':`<label class="guidedLabel" for="f_load_${next.sid}">Charge utilisée (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="Charge à renseigner" oninput="syncGuidedLoad('${next.sid}')">`}</div>
-    <div class="guidedSection"><h3>Répétitions</h3>${rows}<span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span><button class="btn ghost" onclick="startRestForSid('${next.sid}')">Lancer le repos • ${next.rest}</button></div>
-    <div class="guidedSection guidedEffort"><div><b>Effort ressenti</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setEff('${next.sid}','EASY');renderFocus()">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setEff('${next.sid}','OK');renderFocus()">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setEff('${next.sid}','HARD');renderFocus()">😤 Dur</button></div><div id="fError" class="guidedError" role="alert"></div><button class="btn" onclick="guidedValidate('${next.sid}')">Valider l’exercice</button>${result?`<div class="guidedResult"><b>Recommandation</b>\n${escapeHtml(result)}${why?`<details><summary>Pourquoi ?</summary>${why}</details>`:''}</div><button class="btn ghost" onclick="guidedNext('${next.sid}')">Exercice suivant</button>`:''}</div>
-    <div class="guidedSection"><button class="btn ghost" onclick="openDone()">Terminer la séance, même partielle</button></div>`;
+    <div class="guidedSection guidedOverview"><p><b>${next.sets} séries • ${next.lo}–${next.hi} reps • repos ${next.rest}</b></p><div class="small">Dernier résultat : ${ref}</div><div class="guidedTopActions"><button class="btn ghost" onclick="toggleFocus(false)">Tous les exercices</button><button class="btn ghost" onclick="openSwap('${next.sid}')">⇄ Changer</button></div></div>
+    <div class="guidedSection guidedPrescription"><div class="goal">Objectif • ${Number.isFinite(objective)?`${objective} ${unit}`:'charge libre'}</div>${unit==='reps'?'<span></span>':`<div><label class="guidedLabel" for="f_load_${next.sid}">Charge (${unit})</label><input class="guidedLoad" id="f_load_${next.sid}" type="number" min="0" step="any" inputmode="decimal" value="${escapeHtml(cardLoad)}" placeholder="0" oninput="syncGuidedLoad('${next.sid}')"></div>`}</div>
+    <div class="guidedSection guidedSets" style="--set-count:${next.sets}"><h3>Répétitions par série</h3><div class="guidedSetGrid">${rows}</div><span class="small" hidden id="f_repsTotView_${next.sid}">${getSetRepsTotal(next.sid,next.sets)}</span><button class="btn ghost guidedRest" onclick="startRestForSid('${next.sid}')">⏱ Repos • ${next.rest}</button></div>
+    <div class="guidedSection guidedEffort"><div class="guidedEffortTitle"><b>Effort</b> <button class="btn ghost helpBtn" aria-expanded="false" onclick="toggleFieldHelp(this,'fEffHelp')">Aide</button></div><div class="helpText" id="fEffHelp">Facile, OK ou Dur ajuste la prochaine recommandation.</div><div class="seg"><button class="sbtn ${eff==='EASY'?'on':''}" onclick="setEff('${next.sid}','EASY');renderFocus()">😌 Facile</button><button class="sbtn ${eff==='OK'?'on':''}" onclick="setEff('${next.sid}','OK');renderFocus()">🙂 OK</button><button class="sbtn ${eff==='HARD'?'on':''}" onclick="setEff('${next.sid}','HARD');renderFocus()">😤 Dur</button></div><button class="btn" onclick="guidedValidate('${next.sid}')">Valider</button><div id="fError" class="guidedError" role="alert"></div>${result?`<div class="guidedResult"><b>Prochaine fois :</b> ${escapeHtml(result)}${why?`<details><summary>Pourquoi ?</summary>${why}</details>`:''}</div><button class="btn ghost guidedNext" onclick="guidedNext('${next.sid}')">Exercice suivant →</button>`:''}</div>
+    <div class="guidedFinish"><button class="btn ghost" onclick="openDone()">Terminer la séance</button></div>`;
   syncFocusSetRows(next.sid,next.sets);
 }
 

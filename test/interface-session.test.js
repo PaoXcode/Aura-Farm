@@ -30,14 +30,31 @@ test('le repos essentiel est visible dans la barre stable et protège le chrono 
   assert.match(html, /function startRestForSid\(sid\)[\s\S]*if\(rtState\.running\)\{ rtShow\(true\); syncRestTimerHost\(\); return; \}/);
 });
 
-test('le repos compact conserve sept cibles accessibles et le focus quatre commandes', () => {
+test('le même repos compact conserve sept cibles accessibles hors focus et dans le focus', () => {
   const timer = html.match(/<div class="rt" id="rt"[\s\S]*?<\/div>\s*<\/div>\s*<script/)?.[0] || '';
   for(const label of ['Retirer 15 secondes','Ajouter 15 secondes','Réinitialiser le chronomètre','Passer en mode compact','Désactiver le son','Fermer le chronomètre']){
     assert.match(timer, new RegExp(`aria-label="${label}"`));
   }
   assert.match(html, /\.rt \.rtA[^}]*grid-template-columns:repeat\(7,minmax\(44px,1fr\)\)/);
-  assert.match(html, /\.focusRestDock \.rtA[^}]*grid-template-columns:repeat\(4,minmax\(44px,1fr\)\)/);
+  assert.match(html, /\.focusRestDock \.rtA[^}]*grid-template-columns:repeat\(7,minmax\(44px,1fr\)\)/);
+  assert.doesNotMatch(html, /\.focusRestDock #rtReset[^}]*display:none|\.focusRestDock #rtViewBtn[^}]*display:none|\.focusRestDock #rtSoundBtn[^}]*display:none/);
   assert.doesNotMatch(html, /Mode compact actif : la séance reste visible/);
+});
+
+test('lecture et pause restent des icônes SVG avec un nom accessible dynamique', () => {
+  const toggle = html.match(/<button class="btn rtBtn"[^>]*id="rtToggle"[\s\S]*?<\/button>/)?.[0] || '';
+  assert.match(toggle, /aria-label="Démarrer le repos"/);
+  assert.match(toggle, /aria-hidden="true"[\s\S]*<svg/);
+  assert.doesNotMatch(toggle, />\s*(?:Pause|Reprendre|Lecture|Start|Démarrer)\s*</);
+  assert.match(html, /rtState\.running \? 'Mettre en pause' : \(ready \? 'Démarrer le repos' : 'Reprendre le repos'\)/);
+  assert.doesNotMatch(html, /querySelector\('\.rtBtnLabel'\)\.textContent/);
+});
+
+test('le plein écran déplace le chrono unique et revient dans le dock focus', () => {
+  assert.match(html, /const target=\(focusOn&&!rtState\.fullscreen&&dock\)\?dock:document\.body/);
+  assert.match(html, /classList\.toggle\('rt_full', !!\(rtState\.visible && rtState\.fullscreen\)\)/);
+  assert.match(html, /body\.rt_full>\.rt \.rtPrimary[^{]*\{display:flex/);
+  assert.match(html, /body\.rt_full>\.rt \.rtSecondary[^{]*\{display:flex/);
 });
 
 test('C1 est un rappel saisissable sans effort ni progression automatique', () => {

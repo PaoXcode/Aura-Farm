@@ -1195,9 +1195,9 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
 .focusRestDock>.rt.on{position:static;transform:none;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;margin-top:8px;box-shadow:none;background:rgba(212,175,55,.09);z-index:auto;overflow:visible}
 .focusRestDock .rtL{min-width:0;max-width:none}
 .focusRestDock .rtC{grid-column:2;grid-row:1;align-self:center}
-.focusRestDock .rtA{grid-column:1/-1;grid-row:2;width:100%;margin:0;display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px}
+.focusRestDock .rtA{grid-column:1/-1;grid-row:2;width:100%;margin:0;display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px}
 .focusRestDock .rtBtn{width:100%;min-width:44px;min-height:44px}
-.focusRestDock .rtHint,.focusRestDock .rtViewBtn{display:none}
+.focusRestDock .rtHint{display:none}
 
 @media(max-width:600px){
   .focusBox{height:100dvh;max-height:100dvh;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
@@ -1209,7 +1209,7 @@ body[data-theme=light] .resultCard,body[data-theme=light] .historyCard{backgroun
   .guidedSets h3{font-size:14px;margin-bottom:7px}.guidedSetGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.setRow{display:grid;grid-template-columns:1fr 70px;grid-template-rows:auto auto;gap:2px 8px;text-align:left;padding:7px 8px;min-height:62px}.setRow label{font-size:13px;align-self:center}.setRow input{grid-column:2;grid-row:1/3;min-height:44px;font-size:16px}.setRow .setState{grid-column:1;font-size:11px;white-space:normal;overflow:visible}
   .guidedRest{display:none}.guidedEffort{display:block}.guidedEffortTitle{font-size:13px}.guidedEffort .seg{margin-top:7px}.guidedEffort .sbtn{min-height:44px;font-size:12px}.guidedEffort>.btn{display:none}
   .guidedFinish{display:none}.guidedMenu{margin-top:7px}.guidedActionBar{padding-top:8px}.guidedPrimary{min-height:50px}
-  .focusRestDock>.rt.on{padding:8px;gap:7px;max-height:none}.focusRestDock .rtSets{display:none!important}.focusRestDock .rtC{font-size:20px;min-width:76px;padding:7px}.focusRestDock .rtA{gap:5px}.focusRestDock .rtBtn{padding:6px;font-size:12px}.focusRestDock .rtIcon{font-size:15px}.focusRestDock #rtReset,.focusRestDock #rtViewBtn,.focusRestDock #rtSoundBtn{display:none}
+  .focusRestDock>.rt.on{padding:8px;gap:7px;max-height:none}.focusRestDock .rtC{font-size:20px;min-width:76px;padding:7px}.focusRestDock .rtA{gap:5px}.focusRestDock .rtBtn{padding:6px;font-size:12px}.focusRestDock .rtIcon{font-size:15px}
 }
 @media(max-width:340px){.guidedSetGrid{grid-template-columns:1fr}.guidedMenuActions{grid-template-columns:1fr}}
 @media(max-height:650px) and (orientation:landscape){.guidedSetGrid{grid-template-columns:repeat(3,minmax(120px,1fr))}.guidedScroll{padding-bottom:4px}}
@@ -1262,6 +1262,70 @@ body[data-theme=light] .focusBox{background:#f5f5f7!important;color:var(--v3-tex
 body[data-theme=light] .focus .guidedPrimary,body[data-theme=light] .focus .guidedPrimary:hover{background:#282113!important;border-color:#9a7113!important;color:#ffe69a!important}
 body[data-theme=light] .focus .guidedPrimary:active{background:#17130a!important;color:#fff0bc!important}
 body[data-theme=light] .focus .guidedPrimary:disabled{background:#dad7cf!important;border-color:#998b68!important;color:#5e543c!important}
+
+/* Chronomètre unifié : le dock focus et la feuille flottante partagent exactement
+   le même contenu. Seul le plein écran réorganise ces éléments. */
+.rt .rtPrimary,.rt .rtSecondary{display:contents}
+.rt .rtPlayState,.rt .rtPlayState svg{display:block;width:22px;height:22px}
+.rt .rtPlayState svg{fill:currentColor}
+.rt #rtToggle{padding:6px;gap:0}
+.focusRestDock>.rt.on{
+  position:static;transform:none;width:100%;margin-top:8px;z-index:auto;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+  padding:9px 8px!important;gap:7px;overflow:visible;box-shadow:none!important;
+}
+.focusRestDock .rtL{grid-column:1;grid-row:1;min-width:0!important;max-width:none!important}
+.focusRestDock .rtC{grid-column:2;grid-row:1;align-self:center}
+.focusRestDock .rtA{grid-column:1/-1;grid-row:2;width:100%;margin:0;display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px}
+.focusRestDock .rtBtn{display:inline-flex!important;width:100%;min-width:44px;min-height:44px;padding:6px 3px;align-items:center;justify-content:center}
+.focusRestDock .rtSets{display:flex!important;margin-top:4px;gap:4px}
+.focusRestDock .rtSetBtn{width:32px;height:32px;border-radius:9px}
+.focusRestDock .rtHint,.focusRestDock .rtHintMode{display:none}
+
+/* Le chrono plein écran reste une vue du même nœud DOM : aucun état n'est
+   copié ou réinitialisé lors d'un aller-retour depuis le focus. */
+body.rt_full{overflow:hidden}
+body.rt_full .focus,body.rt_full .wrap{pointer-events:none}
+body.rt_full>.rt.on{
+  position:fixed;inset:0;left:0;bottom:auto;transform:none;z-index:10002;
+  width:100%;height:100vh;height:100dvh;max-height:none;border:0!important;border-radius:0!important;
+  padding:max(24px,env(safe-area-inset-top)) max(20px,5vw) max(20px,env(safe-area-inset-bottom))!important;
+  display:grid;grid-template-columns:1fr;grid-template-rows:auto minmax(150px,1fr) auto auto;
+  justify-items:center;align-items:center;gap:clamp(16px,3vh,34px);overflow-y:auto;overscroll-behavior:contain;
+  background:radial-gradient(circle at 50% 35%,rgba(212,175,55,.12),transparent 38%),#090909!important;
+}
+body.rt_full>.rt .rtL{grid-column:1;grid-row:1;width:min(760px,100%);min-width:0!important;max-width:none!important;text-align:center;align-items:center}
+body.rt_full>.rt .rtT{font-size:clamp(22px,4vw,34px)}
+body.rt_full>.rt .rtS{font-size:clamp(14px,2.2vw,19px);line-height:1.4;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+body.rt_full>.rt .rtHint{display:none}
+body.rt_full>.rt .rtSets{justify-content:center;gap:10px;margin-top:clamp(14px,2vh,22px)}
+body.rt_full>.rt .rtSetBtn{width:clamp(44px,6vw,56px);height:clamp(44px,6vw,56px);border-radius:14px;font-size:17px}
+body.rt_full>.rt .rtC{grid-column:1;grid-row:2;font-size:clamp(72px,18vw,160px);line-height:1;min-width:min(720px,100%)!important;padding:clamp(20px,5vh,54px) 16px;border:0;background:transparent;box-shadow:none;letter-spacing:-.04em}
+body.rt_full>.rt .rtA{grid-column:1;grid-row:3/5;width:min(720px,100%);margin:0;display:grid;grid-template-columns:1fr;gap:clamp(14px,2.5vh,24px)}
+body.rt_full>.rt .rtPrimary{display:flex;grid-row:1;justify-content:center;align-items:center;gap:clamp(14px,4vw,38px)}
+body.rt_full>.rt .rtSecondary{display:flex;grid-row:2;justify-content:center;align-items:center;gap:clamp(10px,2.5vw,22px)}
+body.rt_full>.rt .rtBtn{display:inline-flex;width:clamp(52px,8vw,68px);min-width:52px;min-height:52px;padding:10px;align-items:center;justify-content:center;font-size:17px}
+body.rt_full>.rt #rtMinus,body.rt_full>.rt #rtPlus{width:clamp(76px,13vw,108px)}
+body.rt_full>.rt #rtToggle{width:clamp(68px,10vw,84px);height:clamp(68px,10vw,84px);border-radius:50%;box-shadow:0 0 0 4px rgba(212,175,55,.12),0 14px 38px rgba(0,0,0,.5)}
+body.rt_full>.rt #rtToggle .rtPlayState,body.rt_full>.rt #rtToggle svg{width:32px;height:32px}
+
+@media(max-width:350px){
+  body:not(.rt_full)>.rt .rtA,.focusRestDock .rtA{grid-template-columns:repeat(4,minmax(44px,1fr));gap:5px}
+  .rt .rtPrimary,.rt .rtSecondary{display:contents}
+}
+@media(max-height:560px) and (orientation:landscape){
+  body.rt_full>.rt.on{grid-template-columns:minmax(180px,.8fr) minmax(260px,1.2fr);grid-template-rows:auto auto;padding:max(10px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))!important;gap:12px 24px}
+  body.rt_full>.rt .rtL{grid-column:1;grid-row:1/3;text-align:left;align-items:flex-start}
+  body.rt_full>.rt .rtSets{justify-content:flex-start}
+  body.rt_full>.rt .rtC{grid-column:2;grid-row:1;font-size:clamp(58px,15vh,96px);padding:8px;min-width:0!important}
+  body.rt_full>.rt .rtA{grid-column:2;grid-row:2;gap:10px}
+  body.rt_full>.rt .rtPrimary,body.rt_full>.rt .rtSecondary{gap:10px}
+  body.rt_full>.rt .rtBtn{min-height:48px;height:48px}
+  body.rt_full>.rt #rtToggle{width:58px;height:58px}
+}
+@media(min-width:351px) and (max-width:600px){
+  .focusRestDock>.rt.on{max-height:min(240px,34dvh);overflow-y:auto}
+}
 @media(max-width:600px){
   .sessionControls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:7px}
   .sessionControls .btn{min-width:0;padding:8px 7px;font-size:13px}
@@ -1613,13 +1677,17 @@ body[data-theme=light] .focus .guidedPrimary:disabled{background:#dad7cf!importa
   </div>
   <div class="rtC" id="rtClock">00:00</div>
   <div class="rtA">
-    <button class="btn ghost rtBtn" id="rtMinus" type="button" aria-label="Retirer 15 secondes" onclick="rtAdd(-15)"><span class="rtBtnLabel">−15 s</span></button>
-    <button class="btn rtBtn" type="button" id="rtToggle" onclick="rtToggle()"><span class="rtIcon" aria-hidden="true">▶</span><span class="rtBtnLabel">Démarrer</span></button>
-    <button class="btn ghost rtBtn" id="rtPlus" type="button" aria-label="Ajouter 15 secondes" onclick="rtAdd(15)"><span class="rtBtnLabel">+15 s</span></button>
-    <button class="btn ghost rtBtn" id="rtReset" type="button" aria-label="Réinitialiser le chronomètre" title="Réinitialiser" onclick="rtReset()"><span class="rtIcon" aria-hidden="true">↺</span></button>
-    <button class="btn ghost rtBtn rtViewBtn" type="button" id="rtViewBtn" aria-label="Passer en mode compact" onclick="rtToggleView()"><span class="rtIcon" aria-hidden="true">⛶</span></button>
-    <button class="btn ghost rtBtn" type="button" id="rtSoundBtn" aria-label="Désactiver le son" onclick="rtToggleSound()"><span class="rtIcon" aria-hidden="true">🔊</span></button>
-    <button class="btn ghost rtBtn" id="rtClose" type="button" aria-label="Fermer le chronomètre" title="Fermer" onclick="rtClose()"><span class="rtIcon" aria-hidden="true">✕</span></button>
+    <div class="rtPrimary">
+      <button class="btn ghost rtBtn" id="rtMinus" type="button" aria-label="Retirer 15 secondes" onclick="rtAdd(-15)"><span class="rtBtnLabel">−15 s</span></button>
+      <button class="btn rtBtn" type="button" id="rtToggle" aria-label="Démarrer le repos" onclick="rtToggle()"><span class="rtIcon rtPlayState" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <button class="btn ghost rtBtn" id="rtPlus" type="button" aria-label="Ajouter 15 secondes" onclick="rtAdd(15)"><span class="rtBtnLabel">+15 s</span></button>
+    </div>
+    <div class="rtSecondary">
+      <button class="btn ghost rtBtn" id="rtReset" type="button" aria-label="Réinitialiser le chronomètre" title="Réinitialiser" onclick="rtReset()"><span class="rtIcon" aria-hidden="true">↺</span></button>
+      <button class="btn ghost rtBtn rtViewBtn" type="button" id="rtViewBtn" aria-label="Passer en mode compact" onclick="rtToggleView()"><span class="rtIcon" aria-hidden="true">⛶</span></button>
+      <button class="btn ghost rtBtn" type="button" id="rtSoundBtn" aria-label="Désactiver le son" onclick="rtToggleSound()"><span class="rtIcon" aria-hidden="true">🔊</span></button>
+      <button class="btn ghost rtBtn" id="rtClose" type="button" aria-label="Fermer le chronomètre" title="Fermer" onclick="rtClose()"><span class="rtIcon" aria-hidden="true">✕</span></button>
+    </div>
   </div>
 </div>
 
@@ -2172,14 +2240,14 @@ let rtState = {
   exerciseSets:0,
   activeSet:null,
   doneSets:{},
-  fullscreen:true,
+  fullscreen:false,
 };
 
 const RT_STATE_KEY = 'paogramme_rt_state_v1';
 const RT_VIEW_KEY = 'paogramme_rt_view_v1';
 function rtGetView(){
   const v = localStorage.getItem(RT_VIEW_KEY);
-  return v == null ? true : (v === 'full');
+  return v == null ? false : (v === 'full');
 }
 function rtSetView(full){
   rtState.fullscreen = !!full;
@@ -2200,15 +2268,15 @@ function rtToggleView(){
 }
 function rtApplyView(){
   syncRestTimerHost();
-  // En focus, le même chronomètre occupe son dock : il ne devient jamais un
-  // second écran flottant au-dessus de la saisie.
-  document.body.classList.toggle('rt_full', !!(rtState.visible && rtState.fullscreen && !focusOn));
+  // Le plein écran déplace temporairement l'unique chrono au-dessus du focus.
+  // Le verrouillage du focus reste actif et le retour compact retrouve le dock.
+  document.body.classList.toggle('rt_full', !!(rtState.visible && rtState.fullscreen));
   rtUpdateViewUI();
 }
 function syncRestTimerHost(){
   const timer=document.getElementById('rt'),dock=document.getElementById('focusRestDock');
   if(!timer) return;
-  const target=(focusOn&&dock)?dock:document.body;
+  const target=(focusOn&&!rtState.fullscreen&&dock)?dock:document.body;
   if(timer.parentElement!==target) target.appendChild(timer);
 }
 function rtUpdateViewUI(){
@@ -2217,6 +2285,7 @@ function rtUpdateViewUI(){
   if(b){
     b.setAttribute('aria-label', rtState.fullscreen ? 'Passer en mode compact' : 'Passer en plein écran');
     b.title = rtState.fullscreen ? 'Passer en mode compact' : 'Passer en plein écran';
+    b.querySelector('.rtIcon').textContent = rtState.fullscreen ? '▣' : '⛶';
   }
   if(hint){
     hint.textContent = rtState.fullscreen
@@ -2405,9 +2474,12 @@ function rtRender(){
   if(s) s.textContent = rtState.sub || '—';
   if(c) c.textContent = rtFmt(rtState.remainSec);
   if(b){
-    b.querySelector('.rtIcon').textContent = rtState.running ? 'Ⅱ' : '▶';
-    b.querySelector('.rtBtnLabel').textContent = rtState.running ? 'Pause' : 'Reprendre';
-    b.setAttribute('aria-label', rtState.running ? 'Mettre le chronomètre en pause' : 'Reprendre le chronomètre');
+    const ready = !rtState.running && rtState.remainSec === rtState.totalSec && !rtState.finished;
+    b.querySelector('.rtPlayState').innerHTML = rtState.running
+      ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>'
+      : '<svg viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7z"/></svg>';
+    b.setAttribute('aria-label', rtState.running ? 'Mettre en pause' : (ready ? 'Démarrer le repos' : 'Reprendre le repos'));
+    b.title = b.getAttribute('aria-label');
   }
   rtRenderSets();
   rtUpdateSoundUI(); // ✅

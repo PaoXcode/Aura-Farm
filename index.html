@@ -3804,6 +3804,9 @@ function openFocusForSid(sid){
 function toggleFocus(on){
   const next=!!on;
   if(next===focusOn) return;
+  // Le focus est une vue temporaire. Ne synchroniser que l'exercice réellement
+  // affiché avant de détruire ses champs, jamais un ancien focus masqué.
+  if(!next && focusOn && focusPickSid) syncFocusToCard(focusPickSid);
   focusOn=next;
   const el=document.getElementById('focus');
   el.classList.toggle('on',focusOn);
@@ -4118,8 +4121,10 @@ function buildSessionSnapshot(L){
     const unit=v.unit||'kg';
     const last=getLast(v.vid, sd.baseLoad);
     const load = (unit==='reps') ? 0 : toNum(document.getElementById('load_'+sd.sid)?.value);
-    const reps=toNum(document.getElementById('reps_'+sd.sid)?.value);
     const setReps=getSetRepsSlots(sd.sid, sd.sets);
+    // La répartition est la source de vérité. Le total caché n'est qu'une vue
+    // dérivée et peut être en retard lors d'un clic immédiat après la saisie.
+    const reps=setReps.reduce((sum,value)=>sum+(Number.isInteger(value)?value:0),0);
     const setAnalysis=analyzeSetDistribution(setReps);
     const eff=getEff(sd.sid);
     const did=Number.isFinite(reps)&&reps>0;
@@ -4328,7 +4333,7 @@ function renderHistoryDetail(id){
 function saveEdit(entryId){
   const entry=getLog().find(x=>x.id===entryId);if(!entry)return;const items=[];
   for(let n=0;n<entry.items.length;n++){const it=entry.items[n],detailed=Array.isArray(it.setReps)&&!it.legacyAggregate;const loadField=document.getElementById(`ed_load_${entryId}_${n}`);const loadCheck=it.unit==='reps'||!loadField||loadField.value===''?{ok:true,value:it.load??null}:HFCore.validateLoad(loadField.value,HFCore.chargeKind(it.unit),{allowEmpty:true});if(!loadCheck.ok){toast(loadCheck.error);loadField.focus();return;}try{if(detailed){const checks=it.setReps.map((_,i)=>HFCore.validateReps(document.getElementById(`ed_set_${entryId}_${n}_${i}`).value,{allowEmpty:true}));if(checks.some(x=>!x.ok))throw Error(checks.find(x=>!x.ok).error);items.push(HFCore.editHistoryItem(it,{load:loadCheck.value,setReps:checks.map(x=>x.value)}));}else{const check=HFCore.validateReps(document.getElementById(`ed_reps_${entryId}_${n}`).value,{allowEmpty:true});if(!check.ok)throw Error(check.error);items.push(HFCore.editHistoryItem(it,{load:loadCheck.value,repsTot:check.value}));}}catch(error){toast(error.message);return;}}
-  const vol=computeVolume(items),next={...entry,items,vol,total:Object.values(vol).reduce((a,b)=>a+b,0)},result=HFCore.replaceSession(localStorage,entryId,next);if(!result.ok){toast(`Échec de la correction : ${result.error.message}`);return;}rebuildDerivedStateFromLog();toast('Historique mis à jour.');renderHistoryDetail(entryId);
+  const vol=computeVolume(items),next={...entry,items,vol,total:Object.values(vol).reduce((a,b)=>a+b,0)};next.partial=HFCore.sessionSummary(next).status==='partial';const result=HFCore.replaceSession(localStorage,entryId,next);if(!result.ok){toast(`Échec de la correction : ${result.error.message}`);return;}rebuildDerivedStateFromLog();toast('Historique mis à jour.');renderHistoryDetail(entryId);
 }
 function deleteEntry(entryId){
   const entry=getLog().find(x=>x.id===entryId);if(!entry)return;if(!confirm(`Supprimer la séance ${programLabel(entry.programMode)} ${entry.letter} du ${new Date(entry.ts).toLocaleString('fr-FR')} ?`))return;const result=HFCore.removeSession(localStorage,entryId);if(!result.ok){toast(`Échec de la suppression : ${result.error.message}`);return;}rebuildDerivedStateFromLog();openHistoryId='';toast('Séance supprimée.');renderHistory();
@@ -4813,6 +4818,9 @@ function openDone(){
   if(finishingSession || !current?.L) return;
   finishingSession=true;
   const L=current.L;
+  // Sur mobile, Terminer peut être touché pendant que le clavier est encore
+  // ouvert : pousser explicitement le focus courant avant le snapshot.
+  if(focusOn && focusPickSid) syncFocusToCard(focusPickSid);
   for(const sd of getActiveProgram()[L].slots){
     for(let i=1;i<=sd.sets;i++){
       const field=document.getElementById(`setreps_${sd.sid}_${i}`);

@@ -71,3 +71,15 @@ test('la dernière séance utilise un détail accessible sans faux chevron à vi
   assert.match(html, /Aucune séance enregistrée/);
   assert.match(html, /host\.dataset\.sessionKey===panelKey && host\.querySelector\('details'\)\?\.open/);
 });
+
+test('le snapshot calcule le total depuis les mêmes séries que celles sauvegardées', () => {
+  const snapshot = html.match(/function buildSessionSnapshot\(L\)[\s\S]*?\n}/)?.[0] || '';
+  assert.match(snapshot, /const setReps=getSetRepsSlots/);
+  assert.match(snapshot, /const reps=setReps\.reduce/);
+  assert.doesNotMatch(snapshot, /getElementById\('reps_'/);
+});
+
+test('terminer et quitter le focus synchronisent uniquement le focus visible', () => {
+  assert.match(html, /if\(!next && focusOn && focusPickSid\) syncFocusToCard\(focusPickSid\)/);
+  assert.match(html, /function openDone\(\)[\s\S]*if\(focusOn && focusPickSid\) syncFocusToCard\(focusPickSid\)/);
+});

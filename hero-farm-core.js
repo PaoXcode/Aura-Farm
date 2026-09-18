@@ -71,9 +71,14 @@
   function validateSetup(value){
     if(!plainObject(value)||value.version!==1||![1,2,3].includes(value.step)||value.completed!=null&&typeof value.completed!=='boolean'||value.program!=null&&!['strength','hybrid'].includes(value.program)||typeof value.name!=='string'||value.name.length>30) throw new Error('Configuration de démarrage invalide');
   }
-  function validateItem(item,where,{draft=false}={}){
+  function validateItem(item,where,{historical=false}={}){
     if(!plainObject(item)) throw new Error(`${where} : exercice invalide`);
-    for(const name of ['sid','vid']) if(typeof item[name]!=='string'||!item[name]||!/^[\w.:-]+$/u.test(item[name])) throw new Error(`${where} : ${name} manquant ou dangereux`);
+    if(typeof item.sid!=='string'||!item.sid||!/^[\w.:-]+$/u.test(item.sid)) throw new Error(`${where} : sid manquant ou dangereux`);
+    // Les premiers imports CSV ne possédaient pas toujours l'identifiant de
+    // variante. Ils restent consultables comme faits non associés : un nom ne
+    // constitue pas une preuve suffisante pour inventer un vid.
+    if(item.vid==null&&historical){/* historique non associé */}
+    else if(typeof item.vid!=='string'||!item.vid||!/^[\w.:-]+$/u.test(item.vid)) throw new Error(`${where} : vid manquant ou dangereux`);
     if(item.unit!=null&&!['kg','kg par haltère','kg (assistance)','lest (kg)','reps'].includes(item.unit)) throw new Error(`${where} : unité invalide`);
     for(const name of ['sets','lo','hi']) if(item[name]!=null&&(!Number.isInteger(item[name])||item[name]<0)) throw new Error(`${where} : ${name} invalide`);
     if(!finiteOrNull(item.load)||item.load<0) throw new Error(`${where} : charge invalide`);
@@ -95,17 +100,17 @@
       if(typeof entry.letter!=='string'||!entry.letter) throw new Error(`Journal : séance invalide pour ${entry.id}`);
       if(entry.programMode!=null&&!['strength','hybrid'].includes(entry.programMode)) throw new Error(`Journal : programme invalide pour ${entry.id}`);
       if(!Array.isArray(entry.items)) throw new Error(`Journal : exercices invalides pour ${entry.id}`);
-      entry.items.forEach((item,j)=>validateItem(item,`Journal ${entry.id}, exercice ${j+1}`));
+      entry.items.forEach((item,j)=>validateItem(item,`Journal ${entry.id}, exercice ${j+1}`,{historical:true}));
     });
   }
   function validateDraft(value){
-    if(Array.isArray(value)){value.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`,{draft:true}));return;}
+    if(Array.isArray(value)){value.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`));return;}
     if(!plainObject(value)||!Array.isArray(value.items)) throw new Error('Brouillon invalide');
     if(value.sessionId!=null&&(typeof value.sessionId!=='string'||!value.sessionId)) throw new Error('Brouillon : identifiant invalide');
     if(value.letter!=null&&typeof value.letter!=='string') throw new Error('Brouillon : séance invalide');
     if(value.programMode!=null&&!['strength','hybrid'].includes(value.programMode)) throw new Error('Brouillon : programme invalide');
     if(value.version!=null&&value.version!==2) throw new Error('Brouillon : version invalide');
-    value.items.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`,{draft:true}));
+    value.items.forEach((x,i)=>validateItem(x,`Brouillon, exercice ${i+1}`));
   }
   function validateStoredValue(k,v){
     if(typeof v!=='string') throw new Error(`Valeur invalide pour ${k}`);
@@ -184,10 +189,11 @@
   }
   function sessionSummary(entry){
     const items=Array.isArray(entry?.items)?entry.items:[];
-    const completed=items.filter(isCompletedExercise).length;
-    const partial=items.filter(x=>performedSets(x)>0&&!isCompletedExercise(x)).length;
+    const prescribed=items.filter(x=>x?.trackable!==false);
+    const completed=prescribed.filter(isCompletedExercise).length;
+    const partial=prescribed.filter(x=>performedSets(x)>0&&!isCompletedExercise(x)).length;
     const performed=items.reduce((sum,x)=>sum+performedSets(x),0);
-    return {completed,partial,performed,empty:performed===0,status:entry?.partial||partial>0?'partial':'complete'};
+    return {completed,partial,performed,empty:performed===0,status:prescribed.some(x=>!isCompletedExercise(x))?'partial':'complete'};
   }
   const DAY=86400000;
   function periodStart(period,now=Date.now()){
@@ -222,7 +228,7 @@
   }
   function paginate(items,page=1,size=12){const take=Math.max(1,page)*Math.max(1,size);return {items:(items||[]).slice(0,take),shown:Math.min(take,(items||[]).length),total:(items||[]).length,hasMore:take<(items||[]).length};}
   function replaceSession(storage,id,next,logKey='paogramme_log_v2'){
-    let log;try{log=JSON.parse(storage.getItem(logKey)||'[]');const index=log.findIndex(x=>x?.id===id);if(index<0)throw Error('Séance introuvable.');const updated=log.slice();updated[index]=next;validateLog(updated);storage.setItem(logKey,JSON.stringify(updated));return {ok:true,log:updated};}catch(error){return {ok:false,error};}
+    let log;try{log=JSON.parse(storage.getItem(logKey)||'[]');const index=log.findIndex(x=>x?.id===id);if(index<0)throw Error('Séance introuvable.');validateLog([next]);const updated=log.slice();updated[index]=next;validateLog(updated);storage.setItem(logKey,JSON.stringify(updated));return {ok:true,log:updated};}catch(error){return {ok:false,error};}
   }
   function removeSession(storage,id,logKey='paogramme_log_v2'){
     let log;try{log=JSON.parse(storage.getItem(logKey)||'[]');if(!log.some(x=>x?.id===id))throw Error('Séance introuvable.');const updated=log.filter(x=>x?.id!==id);storage.setItem(logKey,JSON.stringify(updated));return {ok:true,log:updated};}catch(error){return {ok:false,error};}
@@ -237,8 +243,14 @@
     if(!entry||typeof entry.id!=='string'||!entry.id) return {ok:false,error:new Error('Identifiant de séance manquant')};
     let log; try{log=JSON.parse(storage.getItem(logKey)||'[]');if(!Array.isArray(log))throw Error('Journal invalide');}catch(error){return {ok:false,error};}
     if(log.some(x=>x&&x.id===entry.id)) return {ok:true,duplicate:true};
-    try{storage.setItem(logKey,JSON.stringify([...log,entry]));storage.removeItem(draftKey);return {ok:true,duplicate:false};}
-    catch(error){return {ok:false,error};}
+    const previousLog=storage.getItem(logKey),previousDraft=storage.getItem(draftKey);
+    try{validateLog([entry]);storage.setItem(logKey,JSON.stringify([...log,entry]));storage.removeItem(draftKey);return {ok:true,duplicate:false};}
+    catch(error){
+      // Si la suppression du brouillon échoue après l'écriture, remettre le
+      // journal précédent évite un faux échec suivi d'un doublon au redémarrage.
+      try{if(previousLog==null)storage.removeItem(logKey);else storage.setItem(logKey,previousLog);if(previousDraft!=null&&storage.getItem(draftKey)!==previousDraft)storage.setItem(draftKey,previousDraft);}catch{}
+      return {ok:false,error};
+    }
   }
   function latestSession(log,letter,programMode){return (log||[]).filter(e=>e?.letter===letter&&(e.programMode||'strength')===programMode).sort((a,b)=>(b.ts||0)-(a.ts||0))[0]||null;}
   function mergeUniqueEntries(existing,incoming){const seen=new Set((existing||[]).map(e=>e?.id).filter(Boolean));return [...(existing||[]),...(incoming||[]).filter(e=>e?.id&&!seen.has(e.id)&&(seen.add(e.id),true))];}

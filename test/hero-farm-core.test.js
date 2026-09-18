@@ -77,13 +77,13 @@ test('échec de restauration remet les anciennes données et fournit une copie r
 });
 test('fin de séance atomique logique: brouillon conservé en échec, double clic dédupliqué',()=>{
   const draft='{"sessionId":"session-1"}', s=new MemoryStorage({paogramme_log_v2:'[]',paogramme_session_draft_v1:draft});
-  const entry={id:'session-1',items:[]};
-  assert.deepEqual(core.commitSession(s,entry),{ok:true,duplicate:false});
+  const saved=entry({id:'session-1'});
+  assert.deepEqual(core.commitSession(s,saved),{ok:true,duplicate:false});
   assert.equal(s.getItem('paogramme_session_draft_v1'),null);
-  assert.equal(core.commitSession(s,entry).duplicate,true);
+  assert.equal(core.commitSession(s,saved).duplicate,true);
   assert.equal(JSON.parse(s.getItem('paogramme_log_v2')).length,1);
   const broken=new MemoryStorage({paogramme_log_v2:'[]',paogramme_session_draft_v1:draft},1);
-  assert.equal(core.commitSession(broken,entry).ok,false);
+  assert.equal(core.commitSession(broken,saved).ok,false);
   assert.equal(broken.getItem('paogramme_session_draft_v1'),draft);
 });
 test('quatre séries de dix ne produisent aucun calcul e1RM dans le noyau',()=>{
@@ -251,6 +251,16 @@ test('réouverture et double validation conservent un seul identifiant',()=>{
   assert.equal(core.commitSession(s,saved).duplicate,false);assert.equal(core.commitSession(s,saved).duplicate,true);
   assert.equal(JSON.parse(s.getItem('paogramme_log_v2')).length,1);
 });
+test('les séances A, B et C relisent exactement chaque répétition enregistrée',()=>{
+  const s=new MemoryStorage({paogramme_log_v2:'[]'}),expected={A:[12,11,10],B:[9,9,8],C:[8,10]};
+  for(const [letter,setReps] of Object.entries(expected)){
+    const saved=entry({id:`session-${letter}`,letter,items:[item({sid:`${letter}1`,sets:setReps.length,setReps,repsTot:setReps.reduce((a,b)=>a+b,0)})]});
+    assert.equal(core.commitSession(s,saved).ok,true);
+  }
+  const reread=JSON.parse(s.getItem('paogramme_log_v2'));
+  assert.deepEqual(Object.fromEntries(reread.map(e=>[e.letter,e.items[0].setReps])),expected);
+  for(const saved of reread)assert.equal(core.sessionSummary(saved).status,'complete');
+});
 
 test('progrès: aucun, un puis plusieurs résultats sont déterministes',()=>{
   assert.deepEqual(core.exerciseVariants([]),[]);
@@ -282,13 +292,37 @@ test('historique: période locale inclut le début du trentième jour',()=>{
   const log=[entry({id:'boundary',ts:start}),entry({id:'before',ts:start-1})];assert.deepEqual(core.filterSessions(log,{period:'30',now}).map(x=>x.id),['boundary']);
 });
 test('historique: programmes et statuts se filtrent sans confondre les séances A',()=>{
-  const log=[entry({id:'s'}),entry({id:'h',programMode:'hybrid',partial:true})];assert.deepEqual(core.filterSessions(log,{program:'hybrid',status:'partial'}).map(x=>x.id),['h']);
+  const log=[entry({id:'s'}),entry({id:'h',programMode:'hybrid',partial:true,items:[item({setReps:[6,null,null,null],repsTot:6})]})];assert.deepEqual(core.filterSessions(log,{program:'hybrid',status:'partial'}).map(x=>x.id),['h']);
 });
 test('historique: plusieurs centaines de séances restent accessibles par pagination',()=>{
   const log=Array.from({length:350},(_,i)=>entry({id:`s-${i}`,ts:i}));const p1=core.paginate(core.filterSessions(log),1,12),all=core.paginate(core.filterSessions(log),30,12);assert.equal(p1.items.length,12);assert.equal(p1.hasMore,true);assert.equal(all.items.length,350);
 });
 test('correction atomique actualise la bonne séance et conserve les séries',()=>{
   const original=entry(),s=new MemoryStorage({paogramme_log_v2:JSON.stringify([original])}),changed={...original,items:[core.editHistoryItem(original.items[0],{load:62})]};const r=core.replaceSession(s,original.id,changed);assert.equal(r.ok,true);assert.deepEqual(JSON.parse(s.getItem('paogramme_log_v2'))[0].items[0].setReps,[6,6,6,6]);assert.equal(core.exerciseResults(r.log,'decline_machine::unit::kg')[0].load,62);
+});
+test('une correction complète recalcule total et statut malgré un ancien drapeau partiel',()=>{
+  const incomplete=item({sets:3,setReps:[12,12,null],repsTot:24}),original=entry({partial:true,items:[incomplete]});
+  const correctedItem=core.editHistoryItem(incomplete,{setReps:[12,12,12]});
+  const corrected={...original,items:[correctedItem]};corrected.partial=core.sessionSummary(corrected).status==='partial';
+  assert.equal(correctedItem.repsTot,36);assert.equal(corrected.partial,false);
+  assert.deepEqual(core.sessionSummary(corrected),{completed:1,partial:0,performed:3,empty:false,status:'complete'});
+});
+test('un exercice prescrit entièrement vide maintient une vraie séance partielle',()=>{
+  const complete=item({sets:3,setReps:[12,12,12],repsTot:36}),empty=item({sid:'A2',sets:3,setReps:[null,null,null],repsTot:null});
+  assert.equal(core.sessionSummary(entry({items:[complete,empty]})).status,'partial');
+});
+test('un historique importé sans vid ne bloque pas la correction indépendante',()=>{
+  const legacy=entry({id:'legacy',ts:0,items:[item({sid:'old-1',vid:null,name:'Nom CSV conservé'})]});
+  const recent=entry({id:'recent',items:[item({sets:3,setReps:[12,12,null],repsTot:24})]});
+  const s=new MemoryStorage({paogramme_log_v2:JSON.stringify([legacy,recent])});
+  const next={...recent,items:[core.editHistoryItem(recent.items[0],{setReps:[12,12,12]})],partial:false};
+  const result=core.replaceSession(s,'recent',next);
+  assert.equal(result.ok,true);assert.equal(result.log[0].items[0].vid,null);assert.equal(result.log[0].items[0].name,'Nom CSV conservé');
+  assert.equal(result.log[1].items[0].repsTot,36);
+});
+test('le format historique accepte un vid absent mais refuse toujours un vid dangereux',()=>{
+  assert.doesNotThrow(()=>core.validateBackup(backup({paogramme_log_v2:JSON.stringify([entry({items:[item({vid:null})]})])})));
+  assert.throws(()=>core.validateBackup(backup({paogramme_log_v2:JSON.stringify([entry({items:[item({vid:'<script>'})]})])})),/vid/);
 });
 test('suppression retire seulement la séance visée',()=>{
   const s=new MemoryStorage({paogramme_log_v2:JSON.stringify([entry(),entry({id:'keep',ts:2})])});const r=core.removeSession(s,'session-1');assert.equal(r.ok,true);assert.deepEqual(r.log.map(x=>x.id),['keep']);

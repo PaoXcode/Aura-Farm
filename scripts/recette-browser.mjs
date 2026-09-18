@@ -47,6 +47,39 @@ async function shot(page,name,theme,viewport){
 }
 
 try{
+  // Non-régression données : la dernière frappe en focus est immédiatement
+  // suivie de Terminer, puis les valeurs sont relues depuis le journal.
+  {
+    const run=await pageFor(scenarios.existingStrength,{width:390,height:844},'light');
+    await run.page.evaluate(()=>openSession('A'));
+    await run.page.click('#focusBtn');
+    await run.page.fill('#f_load_A1','60');
+    const expected=[12,11,10,9];
+    for(let i=0;i<expected.length;i++)await run.page.fill(`#f_setreps_A1_${i+1}`,String(expected[i]));
+    await run.page.evaluate(()=>openDone());
+    const saved=await run.page.evaluate(()=>{
+      const entry=JSON.parse(localStorage.getItem('paogramme_log_v2')).at(-1);
+      return {setReps:entry.items[0].setReps,repsTot:entry.items[0].repsTot,draft:localStorage.getItem('paogramme_session_draft_v1')};
+    });
+    if(JSON.stringify(saved.setReps)!==JSON.stringify(expected)||saved.repsTot!==42||saved.draft!==null)throw Error('La clôture immédiate n’a pas conservé les répétitions exactes');
+    await run.context.close();
+  }
+
+  // Un aller-retour focus/vue générale suivi d'un rechargement restaure les
+  // emplacements, sans recopier une ancienne vue focus masquée.
+  {
+    const run=await pageFor(scenarios.existingStrength,{width:390,height:844},'light');
+    await run.page.evaluate(()=>openSession('B'));
+    await run.page.click('#focusBtn');
+    await run.page.fill('#f_setreps_B1_1','8');
+    await run.page.evaluate(()=>toggleFocus(false));
+    await run.page.reload({waitUntil:'networkidle'});
+    await run.page.evaluate(()=>openSession('B'));
+    const restored=await run.page.inputValue('#setreps_B1_1');
+    if(restored!=='8')throw Error('Le brouillon n’a pas restauré la transition focus/vue générale');
+    await run.context.close();
+  }
+
   // La séance s'ouvre sur les repères habituels ; la vue guidée reste volontaire.
   {
     const run=await pageFor({storage:{}},{width:390,height:844},'light');
